@@ -33,7 +33,7 @@
     </properties>
 
     <modules>
-
+        <module>config-service</module>
     </modules>
 
     <dependencyManagement>
