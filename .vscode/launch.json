@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-ConfigServiceApplication<config-service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.conferenchub.configservice.ConfigServiceApplication",
+      "projectName": "config-service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-DiscoveryServiceApplication<discovery-service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.conferenchub.discoveryservice.DiscoveryServiceApplication",
+      "projectName": "discovery-service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
