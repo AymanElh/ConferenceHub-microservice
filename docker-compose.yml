@@ -46,9 +46,58 @@ services:
       timeout: 5s
       retries: 10
 
+  # ═══════════════════════════════════════════════════════════════
+  # KAFKA (KRaft mode — no Zookeeper needed)
+  # ═══════════════════════════════════════════════════════════════
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: conference-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "9094:9094"   # host access (Spring Boot services running locally)
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ═══════════════════════════════════════════════════════════════
+  # KAFKA UI  — browse topics & messages in browser
+  # ═══════════════════════════════════════════════════════════════
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: conference-kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: conference-hub
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8090:8080"
+    networks:
+      - conference-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+
 networks:
   conference-network:
     driver: bridge
 
 volumes:
   keycloak-pgdata:
+  kafka-data:
