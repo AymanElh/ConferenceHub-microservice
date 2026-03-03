@@ -94,6 +94,27 @@ services:
       kafka:
         condition: service_healthy
 
+
+  # ═══════════════════════════════════════════════════════════════
+  # Conference service
+  # ═══════════════════════════════════════════════════════════════
+  conference-db:
+    image: postgres:18
+    container_name: conference-db
+    environment:
+      POSTGRES_USER: ${CONFERENCE_DB_USER}
+      POSTGRES_PASSWORD: ${CONFERENCE_DB_PASSWORD}
+      POSTGRES_DB: conference-db
+    volumes:
+      - conference-pgdata:/var/lib/postgresql/data
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONFERENCE_DB_USER} -d conference-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   conference-network:
     driver: bridge
@@ -101,3 +122,4 @@ networks:
 volumes:
   keycloak-pgdata:
   kafka-data:
+  conference-pgdata:
