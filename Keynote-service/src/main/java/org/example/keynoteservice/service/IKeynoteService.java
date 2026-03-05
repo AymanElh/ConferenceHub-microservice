@@ -2,8 +2,7 @@ package org.example.keynoteservice.service;
 
 import org.example.keynoteservice.dto.KeynoteDTO;
 import org.springframework.data.domain.Page;
-
-import java.awt.print.Pageable;
+import org.springframework.data.domain.Pageable;
 
 public interface IKeynoteService {
     KeynoteDTO create(KeynoteDTO dto);
