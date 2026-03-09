@@ -144,25 +144,25 @@ services:
   # ═══════════════════════════════════════════════════════════════
   # KEYNOTE SERVICE DATABASE
   # ═══════════════════════════════════════════════════════════════
-  keynote-db:
-    image: mysql:8.0
-    container_name: conference-keynote-db
-    environment:
-      MYSQL_DATABASE: keynote
-      MYSQL_USER: ${KEYNOTE_DB_USER}
-      MYSQL_PASSWORD: ${KEYNOTE_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${KEYNOTE_DB_PASSWORD}
-    ports:
-      - "3306:3306"
-    volumes:
-      - keynote-mysqldata:/var/lib/mysql
-    networks:
-      - conference-network
-    healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+#  keynote-db:
+#    image: mysql:8.0
+#    container_name: conference-keynote-db
+#    environment:
+#      MYSQL_DATABASE: keynote
+#      MYSQL_USER: ${KEYNOTE_DB_USER}
+#      MYSQL_PASSWORD: ${KEYNOTE_DB_PASSWORD}
+#      MYSQL_ROOT_PASSWORD: ${KEYNOTE_DB_PASSWORD}
+#    ports:
+#      - "3306:3306"
+#    volumes:
+#      - keynote-mysqldata:/var/lib/mysql
+#    networks:
+#      - conference-network
+#    healthcheck:
+#      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
 
 networks:
   conference-network:
