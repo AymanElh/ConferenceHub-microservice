@@ -19,6 +19,8 @@ services:
       timeout: 3s
       retries: 5
 
+
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: conference-keycloak
@@ -45,6 +47,51 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # ═══════════════════════════════════════════════════════════════
+  # Keynote service db
+  # ═══════════════════════════════════════════════════════════════
+  keynote_db:
+      container_name: keynote_db
+      image: mariadb:10.11
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_USER: root
+        MYSQL_DATABASE: keynote
+      ports:
+        - "3306:3306"
+      volumes:
+        - keynote_db_data:/var/lib/mysql
+      networks:
+        - keynote_network
+      healthcheck:
+        test: [ "CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+        start_period: 30s
+
+
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    ports:
+      - "8089:80"
+    environment:
+      - PMA_HOST=keynote_db
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+      - PMA_ARBITRARY=1
+      - UPLOAD_LIMIT=1024M
+      - MEMORY_LIMIT=1024M
+      - MAX_EXECUTION_TIME=300
+    networks:
+          - keynote_network
+    depends_on:
+      keynote_db:
+        condition: service_healthy
 
   # ═══════════════════════════════════════════════════════════════
   # KAFKA (KRaft mode — no Zookeeper needed)
@@ -97,7 +144,9 @@ services:
 networks:
   conference-network:
     driver: bridge
+  keynote_network:
 
 volumes:
   keycloak-pgdata:
   kafka-data:
+  keynote_db_data:
