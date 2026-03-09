@@ -3,6 +3,8 @@ package org.example.keynoteservice.service;
 import lombok.RequiredArgsConstructor;
 import org.example.keynoteservice.Mappers.KeynoteMapper;
 import org.example.keynoteservice.dto.KeynoteDTO;
+import org.example.keynoteservice.kafka.KeynoteProducer;
+import org.example.keynoteservice.kafka.KeynoteWelcomeEvent;
 import org.example.keynoteservice.model.Keynote;
 import org.example.keynoteservice.repositroy.keynoteRepository;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ public class KeynoteService implements IKeynoteService {
 
     private final keynoteRepository keynoteRepository;
     private final KeynoteMapper keynoteMapper;
+    private final KeynoteProducer keynoteProducer;
 
     @Override
     public KeynoteDTO create(KeynoteDTO dto) {
@@ -23,7 +26,21 @@ public class KeynoteService implements IKeynoteService {
             throw new IllegalArgumentException("Email already exists: " + dto.getEmail());
         }
         Keynote keynote = keynoteMapper.toEntity(dto);
-        return keynoteMapper.toDto(keynoteRepository.save(keynote));
+        KeynoteDTO saved = keynoteMapper.toDto(keynoteRepository.save(keynote));
+
+        // Publish a welcome event so the notification-service can send the welcome e-mail
+        KeynoteWelcomeEvent event = KeynoteWelcomeEvent.builder()
+                .keynoteId(saved.getId())
+                .nom(saved.getNom())
+                .prenom(saved.getPrenom())
+                .email(saved.getEmail())
+                .fonction(saved.getFonction())
+                .welcomeMessage("Welcome " + saved.getPrenom() + " " + saved.getNom()
+                        + "! You have been registered as a keynote speaker.")
+                .build();
+        keynoteProducer.sendWelcomeEvent(event);
+
+        return saved;
     }
 
     @Override

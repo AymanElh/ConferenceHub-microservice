@@ -1,4 +1,12 @@
 spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false   # keep events clean for the consumer
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/keynote?createDatabaseIfNotExist=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
@@ -22,3 +30,8 @@ eureka:
       defaultZone: http://localhost:8761/eureka
   instance:
     hostname: localhost
+
+application:
+  kafka:
+    topic:
+      keynote: keynote-topic
