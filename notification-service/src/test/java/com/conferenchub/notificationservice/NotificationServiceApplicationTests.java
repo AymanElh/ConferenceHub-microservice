@@ -28,5 +28,15 @@ class NotificationServiceApplicationTests {
         
         assertNotNull(notification.getId());
     }
+    @Autowired
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
+    @Test
+    void testSendKafkaMessage() throws InterruptedException {
+        String jsonEvent = "{\"eventType\": \"KEYNOTE_CREATED\", \"timestamp\": \"2026-03-10T09:00:00\", \"keynoteId\": 101, \"nom\": \"Alice\", \"prenom\": \"Wonder\", \"email\": \"alicekafka@test.com\", \"fonction\": \"Speaker\"}";
+                
+        kafkaTemplate.send("keynote-events", jsonEvent);
+        System.out.println(">>> Message sent to Kafka");
+        Thread.sleep(5000); // Wait for consumer to process
+    }
 }
