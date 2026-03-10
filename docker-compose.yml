@@ -14,7 +14,7 @@ services:
     networks:
       - conference-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak" ]
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -40,7 +40,8 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1" ]
+      test:
+        ["CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -49,26 +50,24 @@ services:
   # Keynote service db
   # ═══════════════════════════════════════════════════════════════
   keynote_db:
-      container_name: keynote_db
-      image: mariadb:10.11
-      restart: always
-      environment:
-        MYSQL_ROOT_PASSWORD: root
-        MYSQL_USER: root
-        MYSQL_DATABASE: keynote
-      ports:
-        - "3306:3306"
-      volumes:
-        - keynote-mysqldata:/var/lib/mysql
-      networks:
-        - keynote_network
-      healthcheck:
-        test: [ "CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
-        interval: 10s
-        timeout: 5s
-        retries: 10
-        start_period: 30s
-
+    container_name: keynote_db
+    image: mariadb:10.11
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keynote
+    ports:
+      - "3306:3306"
+    volumes:
+      - keynote-mysqldata:/var/lib/mysql
+    networks:
+      - keynote_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   phpmyadmin:
     image: phpmyadmin
@@ -85,7 +84,7 @@ services:
       - MEMORY_LIMIT=1024M
       - MAX_EXECUTION_TIME=300
     networks:
-          - keynote_network
+      - keynote_network
     depends_on:
       keynote_db:
         condition: service_healthy
@@ -116,7 +115,11 @@ services:
     networks:
       - conference-network
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -150,6 +153,16 @@ services:
       - mongodb-data:/data/db
     networks:
       - conference-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # ═══════════════════════════════════════════════════════════════
   # MAILPIT (Local Email Testing)
