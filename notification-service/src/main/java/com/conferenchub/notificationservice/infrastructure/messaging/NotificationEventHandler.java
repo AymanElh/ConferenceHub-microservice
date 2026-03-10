@@ -8,15 +8,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationEventHandler {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(topics = "keynote-events", groupId = "notification-group")
+    @KafkaListener(
+            topics = "${application.kafka.topic.keynote:keynote-events}",
+            groupId = "notification-group"
+    )
     public void handleKeynoteCreated(KeynoteCreatedEventDTO event) {
         log.info("Received KeynoteCreatedEvent for: {}", event.email());
         Notification notification = Notification.builder()
@@ -26,6 +30,8 @@ public class NotificationEventHandler {
                 .typeEvenement(EventType.KEYNOTE_CREATED)
                 .referenceId(event.keynoteId())
                 .build();
+
+        log.info("Keynote create notification: {}", notification);
         notificationService.processAndSaveNotification(notification);
     }
 

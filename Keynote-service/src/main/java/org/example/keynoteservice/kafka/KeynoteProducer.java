@@ -16,7 +16,7 @@ public class KeynoteProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @Value("${application.kafka.topic.keynote:keynote-topic}")
+    @Value("${application.kafka.topic.keynote:keynote-events}")
     private String keynoteTopic;
 
     /**

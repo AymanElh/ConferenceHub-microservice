@@ -59,7 +59,7 @@ services:
       ports:
         - "3306:3306"
       volumes:
-        - keynote_db_data:/var/lib/mysql
+        - keynote-mysqldata:/var/lib/mysql
       networks:
         - keynote_network
       healthcheck:

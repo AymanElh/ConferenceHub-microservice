@@ -9,6 +9,6 @@ import org.springframework.kafka.config.TopicBuilder;
 public class KafkaKeynoteTopic {
     @Bean
     public NewTopic keynoteTopic() {
-        return TopicBuilder.name("keynote-topic").build();
+        return TopicBuilder.name("keynote-events").build();
     }
 }
