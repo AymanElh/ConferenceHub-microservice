@@ -5,7 +5,7 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
-        spring.json.add.type.headers: false   # keep events clean for the consumer
+        spring.json.add.type.headers: true
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/keynote?createDatabaseIfNotExist=true}
@@ -24,14 +24,7 @@ spring:
 server:
   port: 8081
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka
-  instance:
-    hostname: localhost
-
 application:
   kafka:
     topic:
-      keynote: keynote-topic
+      keynote: keynote-events

@@ -6,20 +6,18 @@ services:
     image: postgres:16-alpine
     container_name: conference-keycloak-db
     environment:
-      POSTGRES_USER: ${KEYCLOAK_DB_USER}
-      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-admin}
       POSTGRES_DB: keycloak
     volumes:
       - keycloak-pgdata:/var/lib/postgresql/data
     networks:
       - conference-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak"]
+      test: [ "CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-admin} -d keycloak" ]
       interval: 5s
       timeout: 3s
       retries: 5
-
-
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
@@ -28,10 +26,10 @@ services:
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
-      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
-      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-admin}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-admin}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     ports:
       - "8080:8080"
     volumes:
@@ -42,8 +40,7 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test:
-        ["CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1"]
+      test: [ "CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -52,26 +49,24 @@ services:
   # Keynote service db
   # ═══════════════════════════════════════════════════════════════
   keynote_db:
-      container_name: keynote_db
-      image: mariadb:10.11
-      restart: always
-      environment:
-        MYSQL_ROOT_PASSWORD: root
-        MYSQL_USER: root
-        MYSQL_DATABASE: keynote
-      ports:
-        - "3306:3306"
-      volumes:
-        - keynote_db_data:/var/lib/mysql
-      networks:
-        - keynote_network
-      healthcheck:
-        test: [ "CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
-        interval: 10s
-        timeout: 5s
-        retries: 10
-        start_period: 30s
-
+    container_name: keynote_db
+    image: mariadb:10.11
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keynote
+    ports:
+      - "3306:3306"
+    volumes:
+      - keynote-mysqldata:/var/lib/mysql
+    networks:
+      - keynote_network
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   phpmyadmin:
     image: phpmyadmin
@@ -88,7 +83,7 @@ services:
       - MEMORY_LIMIT=1024M
       - MAX_EXECUTION_TIME=300
     networks:
-          - keynote_network
+      - keynote_network
     depends_on:
       keynote_db:
         condition: service_healthy
@@ -113,13 +108,13 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
     ports:
-      - "9094:9094"   # host access (Spring Boot services running locally)
+      - "9094:9094" # host access (Spring Boot services running locally)
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:
       - conference-network
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -142,35 +137,44 @@ services:
         condition: service_healthy
 
   # ═══════════════════════════════════════════════════════════════
-  # KEYNOTE SERVICE DATABASE
+  # MONGODB
   # ═══════════════════════════════════════════════════════════════
-#  keynote-db:
-#    image: mysql:8.0
-#    container_name: conference-keynote-db
-#    environment:
-#      MYSQL_DATABASE: keynote
-#      MYSQL_USER: ${KEYNOTE_DB_USER}
-#      MYSQL_PASSWORD: ${KEYNOTE_DB_PASSWORD}
-#      MYSQL_ROOT_PASSWORD: ${KEYNOTE_DB_PASSWORD}
-#    ports:
-#      - "3306:3306"
-#    volumes:
-#      - keynote-mysqldata:/var/lib/mysql
-#    networks:
-#      - conference-network
-#    healthcheck:
-#      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
+  mongodb:
+    image: mongo:latest
+    container_name: conference-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - conference-network
+    healthcheck:
+      test: [ "CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ═══════════════════════════════════════════════════════════════
+  # MAILPIT (Local Email Testing)
+  # ═══════════════════════════════════════════════════════════════
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: conference-mailpit
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP
+    networks:
+      - conference-network
 
 networks:
   conference-network:
     driver: bridge
   keynote_network:
 
+
 volumes:
   keynote-mysqldata:
   keycloak-pgdata:
   kafka-data:
-  keynote_db_data:
+  mongodb-data:
