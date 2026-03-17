@@ -5,12 +5,15 @@ import com.conferenchub.conferenceservice.conference.dto.response.ConferenceResp
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.ConferenceStatus;
 import com.conferenchub.conferenceservice.conference.entity.Review;
+import com.conferenchub.conferenceservice.conference.kafka.ConferenceCreatedEvent;
 import com.conferenchub.conferenceservice.conference.kafka.ConferenceEventProducer;
 import com.conferenchub.conferenceservice.conference.mapper.ConferenceMapper;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConferenceService {
@@ -29,7 +32,18 @@ public class ConferenceService {
 
         Conference saved = conferenceRepository.save(conference);
 
-//        eventProducer.publishConferenceCreated(saved);
+        ConferenceCreatedEvent event = new ConferenceCreatedEvent(
+                "CONFERENCE_CREATED",
+                java.time.LocalDateTime.now(),
+                saved.getId(),
+                saved.getTitle(),
+                saved.getType().name(),
+                saved.getDate(),
+                saved.getStatus().name()
+        );
+
+        log.debug("Publishing event: {}", event);
+        eventProducer.publishConferenceCreated(event);
 
         return mapper.toResponse(saved);
     }

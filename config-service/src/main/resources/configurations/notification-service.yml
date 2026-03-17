@@ -10,8 +10,6 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
 
 
   mail:
@@ -54,3 +52,11 @@ logging:
     com.conferenchub.notificationservice: DEBUG
     org.springframework.kafka: DEBUG
     org.springframework.kafka.listener: DEBUG
+
+application:
+  notification:
+    managers: ${MANAGER_EMAILS:ayman@gmail.com}
+  kafka:
+    topic:
+      conference: conference-events
+      keynote: keynote-events
