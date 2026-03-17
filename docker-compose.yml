@@ -61,7 +61,7 @@ services:
     volumes:
       - keynote-mysqldata:/var/lib/mysql
     networks:
-      - keynote_network
+      - conference-network
     healthcheck:
       test: [ "CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
       interval: 10s
@@ -84,7 +84,7 @@ services:
       - MEMORY_LIMIT=1024M
       - MAX_EXECUTION_TIME=300
     networks:
-      - keynote_network
+      - conference-network
     depends_on:
       keynote_db:
         condition: service_healthy
@@ -142,12 +142,14 @@ services:
   # Conference service
   # ═══════════════════════════════════════════════════════════════
   conference-db:
-    image: postgres:18
+    image: postgres:16-alpine
     container_name: conference-db
     environment:
       POSTGRES_USER: ${CONFERENCE_DB_USER}
       POSTGRES_PASSWORD: ${CONFERENCE_DB_PASSWORD}
       POSTGRES_DB: conference-db
+    ports:
+      - "5432:5432"
     volumes:
       - conference-pgdata:/var/lib/postgresql/data
     networks:
@@ -196,3 +198,6 @@ networks:
 volumes:
   keycloak-pgdata:
   kafka-data:
+  conference-pgdata:
+  mongodb-data:
+  keynote-mysqldata:

@@ -29,7 +29,7 @@ public class ConferenceService {
 
         Conference saved = conferenceRepository.save(conference);
 
-        eventProducer.publishConferenceCreated(saved);
+//        eventProducer.publishConferenceCreated(saved);
 
         return mapper.toResponse(saved);
     }
