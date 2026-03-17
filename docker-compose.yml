@@ -47,6 +47,49 @@ services:
       retries: 10
 
   # ═══════════════════════════════════════════════════════════════
+  # Keynote service db
+  # ═══════════════════════════════════════════════════════════════
+  keynote_db:
+    container_name: keynote_db
+    image: mariadb:10.11
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keynote
+    ports:
+      - "3306:3306"
+    volumes:
+      - keynote-mysqldata:/var/lib/mysql
+    networks:
+      - keynote_network
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    ports:
+      - "8089:80"
+    environment:
+      - PMA_HOST=keynote_db
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+      - PMA_ARBITRARY=1
+      - UPLOAD_LIMIT=1024M
+      - MEMORY_LIMIT=1024M
+      - MAX_EXECUTION_TIME=300
+    networks:
+      - keynote_network
+    depends_on:
+      keynote_db:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════════════════════════════
   # KAFKA (KRaft mode — no Zookeeper needed)
   # ═══════════════════════════════════════════════════════════════
   kafka:
@@ -115,6 +158,37 @@ services:
       timeout: 5s
       retries: 5
 
+  # ═══════════════════════════════════════════════════════════════
+  # MONGODB
+  # ═══════════════════════════════════════════════════════════════
+  mongodb:
+    image: mongo:latest
+    container_name: conference-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - conference-network
+    healthcheck:
+      test: [ "CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ═══════════════════════════════════════════════════════════════
+  # MAILPIT (Local Email Testing)
+  # ═══════════════════════════════════════════════════════════════
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: conference-mailpit
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP
+    networks:
+      - conference-network
+
 networks:
   conference-network:
     driver: bridge
@@ -122,4 +196,3 @@ networks:
 volumes:
   keycloak-pgdata:
   kafka-data:
-  conference-pgdata:
