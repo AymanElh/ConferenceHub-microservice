@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ConferenceController {
 
-    private final ConferenceService conferenceService;
+    private final   ConferenceService conferenceService;
 
     @PostMapping
     public ResponseEntity<ConferenceResponse> createConference(
