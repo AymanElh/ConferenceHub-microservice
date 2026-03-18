@@ -19,6 +19,8 @@ public class InscriptionController {
             @RequestParam String name) {
 
         inscriptionService.register(conferenceId, email, name);
+
+
         return ResponseEntity.ok("Registration successful for " + email);
     }
 }

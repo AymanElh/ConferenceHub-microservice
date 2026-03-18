@@ -3,6 +3,8 @@ package com.conferenchub.conferenceservice.conference.service;
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.Inscription;
 import com.conferenchub.conferenceservice.conference.entity.InscriptionStatus;
+import com.conferenchub.conferenceservice.conference.kafka.NewInscriptionEvent;
+import com.conferenchub.conferenceservice.conference.kafka.NewInscriptionEventProducer;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
 import com.conferenchub.conferenceservice.conference.repository.InscriptionRepository;
 import jakarta.transaction.Transactional;
@@ -15,6 +17,7 @@ public class InscriptionService {
 
     private final InscriptionRepository inscriptionRepository;
     private final ConferenceRepository conferenceRepository;
+    private final NewInscriptionEventProducer newInscriptionEventProducer;
 
     @Transactional
     public void register(Long conferenceId, String email, String name){
@@ -31,7 +34,17 @@ public class InscriptionService {
         inscription.setParticipantName(name);
         inscription.setStatus(InscriptionStatus.CONFIRMED);
 
-        inscriptionRepository.save(inscription);
+        Inscription saved = inscriptionRepository.save(inscription);
+
+        NewInscriptionEvent inscriptionEvent = new NewInscriptionEvent(
+                "NEW_INSCRIPTION",
+                java.time.LocalDateTime.now(),
+                saved.getId(),
+                conferenceId,
+                email,
+                name
+        );
+         newInscriptionEventProducer.publishConferenceCreated(inscriptionEvent);
 
         conference.setRegisteredNumber(conference.getRegisteredNumber() + 1);
         conferenceRepository.save(conference);

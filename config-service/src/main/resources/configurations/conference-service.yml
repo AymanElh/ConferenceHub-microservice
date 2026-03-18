@@ -33,3 +33,4 @@ application:
   kafka:
     topic:
       conference: conference-events
+      inscription: inscription-events
