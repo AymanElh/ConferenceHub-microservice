@@ -1,4 +1,4 @@
-package com.conferenchub.conferenceservice.conference.feign;
+package com.conferenchub.conferenceservice.conference.client;
 
 import com.conferenchub.conferenceservice.conference.dto.response.KeynoteResponse;
 import org.springframework.cloud.openfeign.FeignClient;

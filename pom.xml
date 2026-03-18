@@ -38,6 +38,7 @@
         <module>Keynote-service</module>
         <module>notification-service</module>
         <module>getway-service</module>
+        <module>conference-service</module>
     </modules>
 
     <dependencyManagement>
