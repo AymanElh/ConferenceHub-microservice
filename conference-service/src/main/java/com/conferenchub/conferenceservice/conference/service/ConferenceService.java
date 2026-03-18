@@ -13,6 +13,7 @@ import com.conferenchub.conferenceservice.conference.kafka.ConferenceCreatedEven
 import com.conferenchub.conferenceservice.conference.kafka.ConferenceEventProducer;
 import com.conferenchub.conferenceservice.conference.mapper.ConferenceMapper;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,22 +34,40 @@ public class ConferenceService {
     private final ConferenceEventProducer eventProducer;
     private final KeynoteClient keynoteClient;
 
-    public ConferenceResponse createConference(CreateConferenceRequest request){
+    public ConferenceResponse createConference(CreateConferenceRequest request) {
 
-        if (request.getKeynoteIds() != null && !request.getKeynoteIds().isEmpty()){
+        if (request.getKeynoteIds() != null && !request.getKeynoteIds().isEmpty()) {
             request.getKeynoteIds().forEach(id -> {
                 try {
                     keynoteClient.getKeynoteById(id);
-                } catch (Exception e) {
+                } catch (
+                        FeignException e) {
                     throw new KeynoteNotFoundException("Keynote with id " + id + " not found");
                 }
             });
         }
 
         Conference conference = mapper.toEntity(request);
+
         conference.setStatus(ConferenceStatus.PLANNED);
         conference.setRegisteredNumber(0);
         conference.setScore(0.0);
+
+        Conference saved = conferenceRepository.save(conference);
+
+        ConferenceCreatedEvent event = new ConferenceCreatedEvent(
+                "CONFERENCE_CREATED",
+                java.time.LocalDateTime.now(),
+                saved.getId(),
+                saved.getTitle(),
+                saved.getType().name(),
+                saved.getDate(),
+                saved.getStatus().name()
+        );
+
+        log.debug("Publishing event: {}", event);
+        eventProducer.publishConferenceCreated(event);
+
         return mapper.toResponse(conferenceRepository.save(conference));
     }
 
@@ -68,24 +87,12 @@ public class ConferenceService {
         } else {
             conferences = conferenceRepository.findAll(pageable);
         }
-        ConferenceCreatedEvent event = new ConferenceCreatedEvent(
-                "CONFERENCE_CREATED",
-                java.time.LocalDateTime.now(),
-                saved.getId(),
-                saved.getTitle(),
-                saved.getType().name(),
-                saved.getDate(),
-                saved.getStatus().name()
-        );
-
-        log.debug("Publishing event: {}", event);
-        eventProducer.publishConferenceCreated(event);
 
         return conferences.map(mapper::toResponse);
     }
 
     @Transactional
-    public void updateScore(Long conferenceId){
+    public void updateScore(Long conferenceId) {
         Conference conference = conferenceRepository.findById(conferenceId).orElseThrow();
         double avg = conference.getReviews()
                 .stream()
@@ -96,7 +103,7 @@ public class ConferenceService {
         conferenceRepository.save(conference);
     }
 
-    public List<ConferenceResponse> getAllConferences(){
+    public List<ConferenceResponse> getAllConferences() {
         return conferenceRepository.findAll()
                 .stream()
                 .map(mapper::toResponse)
