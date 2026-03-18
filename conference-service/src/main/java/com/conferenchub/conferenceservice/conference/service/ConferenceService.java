@@ -1,27 +1,50 @@
 package com.conferenchub.conferenceservice.conference.service;
 
+import com.conferenchub.conferenceservice.conference.client.KeynoteClient;
 import com.conferenchub.conferenceservice.conference.dto.request.CreateConferenceRequest;
 import com.conferenchub.conferenceservice.conference.dto.response.ConferenceResponse;
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.ConferenceStatus;
 import com.conferenchub.conferenceservice.conference.entity.ConferenceType;
 import com.conferenchub.conferenceservice.conference.entity.Review;
+import com.conferenchub.conferenceservice.conference.exception.ConferenceNotFoundException;
+import com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException;
+import com.conferenchub.conferenceservice.conference.kafka.ConferenceCreatedEvent;
+import com.conferenchub.conferenceservice.conference.kafka.ConferenceEventProducer;
 import com.conferenchub.conferenceservice.conference.mapper.ConferenceMapper;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConferenceService {
 
     private final ConferenceRepository conferenceRepository;
     private final ConferenceMapper mapper;
+    private final ConferenceEventProducer eventProducer;
+    private final KeynoteClient keynoteClient;
 
     public ConferenceResponse createConference(CreateConferenceRequest request){
+
+        if (request.getKeynoteIds() != null && !request.getKeynoteIds().isEmpty()){
+            request.getKeynoteIds().forEach(id -> {
+                try {
+                    keynoteClient.getKeynoteById(id);
+                } catch (Exception e) {
+                    throw new KeynoteNotFoundException("Keynote with id " + id + " not found");
+                }
+            });
+        }
+
         Conference conference = mapper.toEntity(request);
         conference.setStatus(ConferenceStatus.PLANNED);
         conference.setRegisteredNumber(0);
@@ -45,6 +68,18 @@ public class ConferenceService {
         } else {
             conferences = conferenceRepository.findAll(pageable);
         }
+        ConferenceCreatedEvent event = new ConferenceCreatedEvent(
+                "CONFERENCE_CREATED",
+                java.time.LocalDateTime.now(),
+                saved.getId(),
+                saved.getTitle(),
+                saved.getType().name(),
+                saved.getDate(),
+                saved.getStatus().name()
+        );
+
+        log.debug("Publishing event: {}", event);
+        eventProducer.publishConferenceCreated(event);
 
         return conferences.map(mapper::toResponse);
     }
@@ -59,5 +94,20 @@ public class ConferenceService {
                 .orElse(0);
         conference.setScore(avg);
         conferenceRepository.save(conference);
+    }
+
+    public List<ConferenceResponse> getAllConferences(){
+        return conferenceRepository.findAll()
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public ConferenceResponse updateStatus(Long id, ConferenceStatus status) {
+        var conference = conferenceRepository.findById(id)
+                .orElseThrow(() -> new ConferenceNotFoundException("Conference not found with id: " + id));
+
+        conference.setStatus(status);
+        return mapper.toResponse(conferenceRepository.save(conference));
     }
 }

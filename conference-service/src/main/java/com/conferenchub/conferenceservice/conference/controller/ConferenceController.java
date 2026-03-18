@@ -1,6 +1,7 @@
 package com.conferenchub.conferenceservice.conference.controller;
 
 import com.conferenchub.conferenceservice.conference.dto.request.CreateConferenceRequest;
+import com.conferenchub.conferenceservice.conference.dto.request.UpdateConferenceRequest;
 import com.conferenchub.conferenceservice.conference.dto.response.ConferenceResponse;
 import com.conferenchub.conferenceservice.conference.entity.ConferenceType;
 import com.conferenchub.conferenceservice.conference.service.ConferenceService;
@@ -10,6 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,4 +41,16 @@ public class ConferenceController {
             Pageable pageable) {
         return ResponseEntity.ok(conferenceService.searchConferences(title, type, pageable));
     }
+    @GetMapping
+    public ResponseEntity<List<ConferenceResponse>> getAllConferences() {
+        return ResponseEntity.ok(conferenceService.getAllConferences());
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ConferenceResponse> updateStatus(
+            @PathVariable Long id,
+            @RequestBody UpdateConferenceRequest updateConferenceRequest) {
+        return ResponseEntity.ok(conferenceService.updateStatus(id, updateConferenceRequest.getStatus()));
+    }
+
 }

@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: getway-service
+  config:
+    import: "optional:configserver:http://localhost:8888"
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 3000
+        multiplier: 1.5
+        max-attempts: 6
