@@ -6,6 +6,7 @@ import com.conferenchub.conferenceservice.conference.dto.response.ConferenceResp
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.ConferenceStatus;
 import com.conferenchub.conferenceservice.conference.entity.Review;
+import com.conferenchub.conferenceservice.conference.exception.ConferenceNotFoundException;
 import com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException;
 import com.conferenchub.conferenceservice.conference.kafka.ConferenceCreatedEvent;
 import com.conferenchub.conferenceservice.conference.kafka.ConferenceEventProducer;
@@ -85,5 +86,13 @@ public class ConferenceService {
                 .stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public ConferenceResponse updateStatus(Long id, ConferenceStatus status) {
+        var conference = conferenceRepository.findById(id)
+                .orElseThrow(() -> new ConferenceNotFoundException("Conference not found with id: " + id));
+
+        conference.setStatus(status);
+        return mapper.toResponse(conferenceRepository.save(conference));
     }
 }

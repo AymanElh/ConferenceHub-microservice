@@ -1,16 +1,13 @@
 package com.conferenchub.conferenceservice.conference.controller;
 
 import com.conferenchub.conferenceservice.conference.dto.request.CreateConferenceRequest;
+import com.conferenchub.conferenceservice.conference.dto.request.UpdateConferenceRequest;
 import com.conferenchub.conferenceservice.conference.dto.response.ConferenceResponse;
 import com.conferenchub.conferenceservice.conference.service.ConferenceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -30,12 +27,16 @@ public class ConferenceController {
         );
     }
 
-
     @GetMapping
     public ResponseEntity<List<ConferenceResponse>> getAllConferences() {
         return ResponseEntity.ok(conferenceService.getAllConferences());
     }
 
-
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ConferenceResponse> updateStatus(
+            @PathVariable Long id,
+            @RequestBody UpdateConferenceRequest updateConferenceRequest) {
+        return ResponseEntity.ok(conferenceService.updateStatus(id, updateConferenceRequest.getStatus()));
+    }
 
 }

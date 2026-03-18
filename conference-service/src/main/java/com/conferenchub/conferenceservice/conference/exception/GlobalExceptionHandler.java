@@ -25,6 +25,19 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
+    
+    // handle Conference not found exception
+    @ExceptionHandler(ConferenceNotFoundException.class)
+    public ResponseEntity<ApiError> handleConferenceNotFoundException(ConferenceNotFoundException ex) {
+        log.error("Conference not found: {}", ex.getMessage(), ex);
+        ApiError error = new ApiError(
+                HttpStatus.NOT_FOUND.value(),
+                "Conference not found",
+                ex.getMessage(),
+                Instant.now());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
 
     // handle run time exception
     @ExceptionHandler(RuntimeException.class)
