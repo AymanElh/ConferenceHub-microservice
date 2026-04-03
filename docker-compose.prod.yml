@@ -1,0 +1,41 @@
+services:
+  keycloak-db:
+    restart: unless-stopped
+
+  keycloak:
+    command: start --import-realm
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+
+  keynote_db:
+    restart: unless-stopped
+
+  kafka:
+    restart: unless-stopped
+
+  conference-db:
+    restart: unless-stopped
+
+  mongodb:
+    restart: unless-stopped
+
+  config-service:
+    restart: unless-stopped
+
+  discovery-service:
+    restart: unless-stopped
+
+  gateway-service:
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+
+  keynote-service:
+    restart: unless-stopped
+
+  conference-service:
+    restart: unless-stopped
+
+  notification-service:
+    restart: unless-stopped

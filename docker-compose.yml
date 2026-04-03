@@ -14,7 +14,7 @@ services:
     networks:
       - conference-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak"]
+      test: [ "CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -22,7 +22,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: conference-keycloak
-    command: start-dev --import-realm
+    # command: override in dev/prod
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -30,8 +30,6 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    ports:
-      - "8080:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
     networks:
@@ -40,8 +38,7 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test:
-        ["CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1"]
+      test: [ "CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -52,12 +49,9 @@ services:
   keynote_db:
     container_name: keynote_db
     image: mariadb:10.11
-    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: keynote
-    ports:
-      - "3306:3306"
     volumes:
       - keynote-mysqldata:/var/lib/mysql
     networks:
@@ -68,26 +62,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-
-  phpmyadmin:
-    image: phpmyadmin
-    restart: always
-    ports:
-      - "8089:80"
-    environment:
-      - PMA_HOST=keynote_db
-      - PMA_PORT=3306
-      - PMA_USER=root
-      - PMA_PASSWORD=root
-      - PMA_ARBITRARY=1
-      - UPLOAD_LIMIT=1024M
-      - MEMORY_LIMIT=1024M
-      - MAX_EXECUTION_TIME=300
-    networks:
-      - conference-network
-    depends_on:
-      keynote_db:
-        condition: service_healthy
 
   # ═══════════════════════════════════════════════════════════════
   # KAFKA (KRaft mode — no Zookeeper needed)
@@ -108,35 +82,15 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
-    ports:
-      - "9094:9094"   # host access (Spring Boot services running locally)
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:
       - conference-network
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ═══════════════════════════════════════════════════════════════
-  # KAFKA UI  — browse topics & messages in browser
-  # ═══════════════════════════════════════════════════════════════
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: conference-kafka-ui
-    environment:
-      KAFKA_CLUSTERS_0_NAME: conference-hub
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    ports:
-      - "8090:8080"
-    networks:
-      - conference-network
-    depends_on:
-      kafka:
-        condition: service_healthy
-
 
   # ═══════════════════════════════════════════════════════════════
   # Conference service
@@ -148,14 +102,12 @@ services:
       POSTGRES_USER: ${CONFERENCE_DB_USER}
       POSTGRES_PASSWORD: ${CONFERENCE_DB_PASSWORD}
       POSTGRES_DB: conference-db
-    ports:
-      - "5432:5432"
     volumes:
       - conference-pgdata:/var/lib/postgresql/data
     networks:
       - conference-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CONFERENCE_DB_USER} -d conference-db"]
+      test: [ "CMD-SHELL", "pg_isready -U ${CONFERENCE_DB_USER} -d conference-db" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -166,8 +118,6 @@ services:
   mongodb:
     image: mongo:latest
     container_name: conference-mongodb
-    ports:
-      - "27017:27017"
     volumes:
       - mongodb-data:/data/db
     networks:
@@ -180,16 +130,143 @@ services:
       start_period: 20s
 
   # ═══════════════════════════════════════════════════════════════
-  # MAILPIT (Local Email Testing)
+  # CONFIG SERVICE
   # ═══════════════════════════════════════════════════════════════
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: conference-mailpit
-    ports:
-      - "8025:8025" # Web UI
-      - "1025:1025" # SMTP
+  config-service:
+    build:
+      context: .
+      dockerfile: config-service/Dockerfile
+    container_name: conference-config-service
+    environment:
+      - CONFIG_GIT_URI=${CONFIG_GIT_URI}
+      - CONFIG_GIT_USER=${CONFIG_GIT_USER}
+      - CONFIG_GIT_PASSWORD=${CONFIG_GIT_PASSWORD}
     networks:
       - conference-network
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════
+  # DISCOVERY SERVICE
+  # ═══════════════════════════════════════════════════════════════
+  discovery-service:
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
+    container_name: conference-discovery-service
+    environment:
+      - CONFIG_SERVER_URL=http://config-service:8888
+    networks:
+      - conference-network
+    depends_on:
+      config-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════
+  # GATEWAY SERVICE
+  # ═══════════════════════════════════════════════════════════════
+  gateway-service:
+    build:
+      context: .
+      dockerfile: getway-service/Dockerfile
+    container_name: conference-gateway-service
+    environment:
+      - CONFIG_SERVER_URL=http://config-service:8888
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════
+  # KEYNOTE SERVICE
+  # ═══════════════════════════════════════════════════════════════
+  keynote-service:
+    build:
+      context: .
+      dockerfile: Keynote-service/Dockerfile
+    container_name: conference-keynote-service
+    environment:
+      - CONFIG_SERVER_URL=http://config-service:8888
+      - SPRING_DATASOURCE_URL=jdbc:mysql://keynote_db:3306/keynote
+      - SPRING_DATASOURCE_USERNAME=${KEYNOTE_DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${KEYNOTE_DB_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════
+  # CONFERENCE SERVICE
+  # ═══════════════════════════════════════════════════════════════
+  conference-service:
+    build:
+      context: .
+      dockerfile: conference-service/Dockerfile
+    container_name: conference-conference-service
+    environment:
+      - CONFIG_SERVER_URL=http://config-service:8888
+      - CONFERENCE_DB_URL=jdbc:postgresql://conference-db:5432/conference-db
+      - CONFERENCE_DB_USER=${CONFERENCE_DB_USER}
+      - CONFERENCE_DB_PASSWORD=${CONFERENCE_DB_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════
+  # NOTIFICATION SERVICE
+  # ═══════════════════════════════════════════════════════════════
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: conference-notification-service
+    environment:
+      - CONFIG_SERVER_URL=http://config-service:8888
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 networks:
   conference-network:

@@ -1,13 +1,24 @@
 spring:
   application:
     name: config-service
-  profiles:
-    active: native
   cloud:
     config:
       server:
-        native:
-          search-locations: classpath:/configurations
+        git:
+          uri: ${CONFIG_GIT_URI}
+          username: ${CONFIG_GIT_USER}
+          password: ${CONFIG_GIT_PASSWORD}
+          clone-on-start: true
+
+logging:
+  level:
+    org:
+      eclipse:
+        jgit: DEBUG
+      springframework:
+        cloud:
+          config:
+            server: DEBUG
 
 server:
   port: 8888
