@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.example.keynoteservice.dto.KeynoteDTO;
 import org.example.keynoteservice.service.IKeynoteService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api/keynotes")
@@ -41,7 +43,13 @@ public class KeynoteController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<KeynoteDTO>> findAll(Pageable pageable) {
+    public ResponseEntity<Page<KeynoteDTO>> findAll(
+            @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "asc") String sortOrder
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortOrder.equals("desc") ? Sort.Direction.DESC : Sort.Direction.ASC, sortBy));
         return ResponseEntity.ok(keynoteService.findAll(pageable));
     }
 

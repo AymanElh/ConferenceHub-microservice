@@ -38,10 +38,12 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1" ]
+      # Keycloak 26+ (Quarkus) health endpoint
+      test: [ "CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1" ]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 60s
 
   # ═══════════════════════════════════════════════════════════════
   # Keynote service db
@@ -233,6 +235,8 @@ services:
       - CONFERENCE_DB_URL=jdbc:postgresql://conference-db:5432/conference-db
       - CONFERENCE_DB_USER=${CONFERENCE_DB_USER}
       - CONFERENCE_DB_PASSWORD=${CONFERENCE_DB_PASSWORD}
+      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI}
+      - KEYCLOAK_JWK_URI=${KEYCLOAK_JWK_URI}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - conference-network
