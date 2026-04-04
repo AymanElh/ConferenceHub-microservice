@@ -4,6 +4,7 @@ import com.conferenchub.conferenceservice.conference.dto.request.CreateConferenc
 import com.conferenchub.conferenceservice.conference.dto.response.ConferenceResponse;
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ public interface ConferenceMapper {
 
     Conference toEntity(CreateConferenceRequest dto);
 
+    @Mapping(target = "keynotes", ignore = true)
     ConferenceResponse toResponse(Conference conference);
 
     List<ConferenceResponse> toResponseList(List<Conference> conferences);

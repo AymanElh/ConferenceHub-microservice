@@ -21,5 +21,5 @@ public class ConferenceResponse {
     private Integer registeredNumber;
     private Double score;
     private LocalDate date;
-    private List<Long> keynoteIds;
+    private List<KeynoteResponse> keynotes;
 }
