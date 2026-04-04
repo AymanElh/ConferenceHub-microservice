@@ -1,5 +1,6 @@
 package com.conferenchub.notificationservice.domain.repository;
 
+import com.conferenchub.notificationservice.domain.model.EventType;
 import com.conferenchub.notificationservice.domain.model.Notification;
 import com.conferenchub.notificationservice.domain.model.NotificationStatus;
 import org.springframework.data.domain.Page;
@@ -14,4 +15,5 @@ public interface NotificationRepository extends MongoRepository<Notification, St
     Page<Notification> findByDestinataire(String destinataire, Pageable pageable);
     Page<Notification> findByReferenceId(Long referenceId, Pageable pageable);
     List<Notification> findByStatut(NotificationStatus statut);
+    boolean existsByReferenceIdAndTypeEvenementAndStatut(Long referenceId, EventType typeEvenement, NotificationStatus statut);
 }

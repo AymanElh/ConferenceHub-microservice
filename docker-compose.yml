@@ -22,7 +22,6 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: conference-keycloak
-    # command: override in dev/prod
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -95,7 +94,7 @@ services:
       retries: 5
 
   # ═══════════════════════════════════════════════════════════════
-  # Conference service
+  # Conference service db
   # ═══════════════════════════════════════════════════════════════
   conference-db:
     image: postgres:16-alpine
@@ -123,13 +122,24 @@ services:
     volumes:
       - mongodb-data:/data/db
     networks:
-      - conference-network
+      conference-network:
+        aliases:
+          - mongo
     healthcheck:
       test: [ "CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  # ═══════════════════════════════════════════════════════════════
+  # Mailpit (SMTP trap — needed by notification-service in all envs)
+  # ═══════════════════════════════════════════════════════════════
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: conference-mailpit
+    networks:
+      - conference-network
 
   # ═══════════════════════════════════════════════════════════════
   # CONFIG SERVICE
@@ -260,6 +270,10 @@ services:
     container_name: conference-notification-service
     environment:
       - CONFIG_SERVER_URL=http://config-service:8888
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - MONGO_HOST=mongodb
+      - SPRING_DATA_MONGODB_HOST=mongodb
+      - MAIL_HOST=mailpit
     networks:
       - conference-network
     depends_on:

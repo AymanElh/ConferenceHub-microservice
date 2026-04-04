@@ -7,6 +7,7 @@ import com.conferenchub.notificationservice.application.service.NotificationServ
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,17 +22,21 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public Page<Notification> getAllNotifications(Pageable pageable) {
+    public Page<Notification> getAllNotifications(@PageableDefault(page = 0, size = 10) Pageable pageable) {
         return notificationRepository.findAll(pageable);
     }
 
     @GetMapping(params = "email")
-    public Page<Notification> getNotificationsByEmail(@RequestParam String email, Pageable pageable) {
+    public Page<Notification> getNotificationsByEmail(
+            @RequestParam String email,
+            @PageableDefault(page = 0, size = 10) Pageable pageable) {
         return notificationRepository.findByDestinataire(email, pageable);
     }
 
     @GetMapping(params = "conferenceId")
-    public Page<Notification> getNotificationsByConferenceId(@RequestParam Long conferenceId, Pageable pageable) {
+    public Page<Notification> getNotificationsByConferenceId(
+            @RequestParam Long conferenceId,
+            @PageableDefault(page = 0, size = 10) Pageable pageable) {
         return notificationRepository.findByReferenceId(conferenceId, pageable);
     }
 

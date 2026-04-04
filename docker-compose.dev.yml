@@ -1,25 +1,54 @@
+# ═══════════════════════════════════════════════════════════════
+# docker-compose.dev.yml  —  Development overrides
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# What this file adds / changes:
+#   • Keycloak starts in dev mode (start-dev) and is port-exposed
+#   • All infrastructure ports are exposed to localhost for tooling
+#   • Dev-only GUI tools: mongo-express, phpMyAdmin, kafka-ui
+#   • Mailpit web UI is exposed
+# ═══════════════════════════════════════════════════════════════
+
 services:
+
+  # ── Keycloak (dev mode) ───────────────────────────────────────
   keycloak:
     command: start-dev --import-realm
     ports:
       - "8080:8080"
 
-  keynote_db:
+  # ── Databases — expose ports for local tooling ─────────────────
+  keycloak-db:
     ports:
-      - "3306:3306"
-
-  kafka:
-    ports:
-      - "9094:9094"
+      - "5433:5432"       # keycloak postgres (avoid clash with conference-db)
 
   conference-db:
     ports:
       - "5432:5432"
 
+  keynote_db:
+    ports:
+      - "3306:3306"
+
+  # ── Messaging ──────────────────────────────────────────────────
+  kafka:
+    ports:
+      - "9094:9094"       # External listener for local producers/consumers
+
+  # ── MongoDB ────────────────────────────────────────────────────
   mongodb:
     ports:
       - "27017:27017"
 
+  # ── Mailpit — expose web UI + SMTP ─────────────────────────────
+  mailpit:
+    ports:
+      - "8025:8025"       # Web UI
+      - "1025:1025"       # SMTP
+
+  # ── Application services — expose for local debug ──────────────
   config-service:
     ports:
       - "8888:8888"
@@ -44,43 +73,57 @@ services:
     ports:
       - "8083:8083"
 
-  # ── Dev-only tools ─────────────────────────────────────────────
+  # ═══════════════════════════════════════════════════════════════
+  # DEV-ONLY GUI TOOLS  (not present in base or prod)
+  # ═══════════════════════════════════════════════════════════════
+
+  # Mongo Express — MongoDB web UI
+  mongo-express:
+    image: mongo-express:latest
+    container_name: conference-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8091:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH: "false"
+    networks:
+      - conference-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # phpMyAdmin — MariaDB web UI
   phpmyadmin:
-    image: phpmyadmin
-    restart: always
+    image: phpmyadmin:latest
+    container_name: conference-phpmyadmin
+    restart: unless-stopped
     ports:
       - "8089:80"
     environment:
-      - PMA_HOST=keynote_db
-      - PMA_PORT=3306
-      - PMA_USER=root
-      - PMA_PASSWORD=root
-      - PMA_ARBITRARY=1
+      PMA_HOST: keynote_db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+      PMA_ARBITRARY: "1"
     networks:
       - conference-network
     depends_on:
       keynote_db:
         condition: service_healthy
 
+  # Kafka UI — Kafka web UI
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: conference-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: conference-hub
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    ports:
-      - "8090:8080"
     networks:
       - conference-network
     depends_on:
       kafka:
         condition: service_healthy
-
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: conference-mailpit
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-    networks:
-      - conference-network
