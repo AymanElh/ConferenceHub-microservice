@@ -12,6 +12,9 @@ import com.conferenchub.conferenceservice.conference.exception.ConferenceNotFoun
 import com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException;
 import com.conferenchub.conferenceservice.conference.kafka.ConferenceCreatedEvent;
 import com.conferenchub.conferenceservice.conference.kafka.ConferenceEventProducer;
+import com.conferenchub.conferenceservice.conference.kafka.ConferenceStatusChangedEvent;
+import com.conferenchub.conferenceservice.conference.entity.Inscription;
+import java.time.LocalDateTime;
 import com.conferenchub.conferenceservice.conference.mapper.ConferenceMapper;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
 import com.conferenchub.conferenceservice.conference.service.ConferenceService;
@@ -157,6 +160,26 @@ public class ConferenceServiceImpl implements ConferenceService {
                 .orElseThrow(() -> new ConferenceNotFoundException("Conference not found with id: " + id));
 
         conference.setStatus(status);
-        return mapper.toResponse(conferenceRepository.save(conference));
+        Conference saved = conferenceRepository.save(conference);
+
+        if (status == ConferenceStatus.IN_PROGRESS) {
+            List<String> emails = saved.getInscriptions().stream()
+                    .map(Inscription::getParticipantEmail)
+                    .collect(Collectors.toList());
+
+            ConferenceStatusChangedEvent event = new ConferenceStatusChangedEvent(
+                    "CONFERENCE_STATUS_CHANGED",
+                    LocalDateTime.now(),
+                    saved.getId(),
+                    saved.getTitle(),
+                    "EN_COURS",
+                    emails
+            );
+
+            log.info("Publishing status changed event for conference {}: status=EN_COURS", saved.getId());
+            eventProducer.publishConferenceStatusChanged(event);
+        }
+
+        return mapper.toResponse(saved);
     }
 }

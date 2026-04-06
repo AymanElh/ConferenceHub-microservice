@@ -1,9 +1,9 @@
-package com.conferenchub.notificationservice.application.dto;
+package com.conferenchub.conferenceservice.conference.kafka;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record ConferenceStatusChangedEventDTO(
+public record ConferenceStatusChangedEvent(
         String eventType,
         LocalDateTime timestamp,
         Long conferenceId,

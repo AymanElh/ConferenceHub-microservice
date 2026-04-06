@@ -32,4 +32,18 @@ public class ConferenceEventProducer {
 
         log.info("ConferenceCreatedEvent published successfully to topic '{}'", conferenceTopic);
     }
+
+    public void publishConferenceStatusChanged(ConferenceStatusChangedEvent event) {
+        log.info("Publishing ConferenceStatusChangedEvent for conference id={} title={} status={}",
+                event.conferenceId(), event.title(), event.status());
+
+        Message<ConferenceStatusChangedEvent> message = MessageBuilder
+                .withPayload(event)
+                .setHeader(KafkaHeaders.TOPIC, conferenceTopic)
+                .build();
+
+        kafkaTemplate.send(message);
+
+        log.info("ConferenceStatusChangedEvent published successfully to topic '{}'", conferenceTopic);
+    }
 }

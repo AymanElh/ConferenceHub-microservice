@@ -45,8 +45,29 @@ public class NotificationEventHandler {
     }
 
     @KafkaListener(topics = "${application.kafka.topic.conference:conference-events}", groupId = "notification-group")
-    public void handleConferenceEvents(ConferenceCreatedEventDTO conferenceCreatedEventDTO) {
-        log.info("Received ConferenceCreatedEvent for conferenceId: {}", conferenceCreatedEventDTO.conferenceId());
+    public void handleConferenceEvents(String messageJson) {
+        try {
+            // First, peek at the eventType
+            var node = objectMapper.readTree(messageJson);
+            log.debug("Conference event received: {}", messageJson);
+            String eventType = node.get("eventType").asText();
+
+            if ("CONFERENCE_CREATED".equals(eventType)) {
+                ConferenceCreatedEventDTO event = objectMapper.readValue(messageJson, ConferenceCreatedEventDTO.class);
+                processConferenceCreated(event);
+            } else if ("CONFERENCE_STATUS_CHANGED".equals(eventType)) {
+                ConferenceStatusChangedEventDTO event = objectMapper.readValue(messageJson, ConferenceStatusChangedEventDTO.class);
+                processConferenceStatusChanged(event);
+            } else {
+                log.warn("Unknown conference event type: {}", eventType);
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse conference event: {}", messageJson, e);
+        }
+    }
+
+    private void processConferenceCreated(ConferenceCreatedEventDTO event) {
+        log.info("Processing ConferenceCreatedEvent for conferenceId: {}", event.conferenceId());
         List<String> managerEmails = parseManagerEmails();
         if (managerEmails.isEmpty()) {
             log.warn("No manager emails configured; skipping conference notification.");
@@ -58,13 +79,38 @@ public class NotificationEventHandler {
                     .destinataire(managerEmail)
                     .sujet("Nouvelle conférence créée")
                     .contenu(String.format("Une nouvelle conférence intitulée '%s' a été créée pour le %s.",
-                            conferenceCreatedEventDTO.titre(), conferenceCreatedEventDTO.date()))
+                            event.titre(), event.date()))
                     .typeEvenement(EventType.CONFERENCE_CREATED)
-                    .referenceId(conferenceCreatedEventDTO.conferenceId())
+                    .referenceId(event.conferenceId())
                     .build();
 
             log.info("Conference create notification: {}", notification);
             notificationService.processAndSaveNotification(notification);
+        }
+    }
+
+    private void processConferenceStatusChanged(ConferenceStatusChangedEventDTO event) {
+        log.info("Processing ConferenceStatusChangedEvent for conferenceId: {} with status: {}", event.conferenceId(), event.status());
+
+        if ("EN_COURS".equals(event.status())) {
+            List<String> participants = event.participantEmails();
+            if (participants == null || participants.isEmpty()) {
+                log.warn("No participants to notify for conference {}", event.conferenceId());
+                return;
+            }
+
+            for (String email : participants) {
+                Notification notification = Notification.builder()
+                        .destinataire(email)
+                        .sujet("Rappel: Votre conférence commence !")
+                        .contenu(String.format("La conférence '%s' a maintenant commencé (EN COURS). Ne la manquez pas !", event.title()))
+                        .typeEvenement(EventType.CONFERENCE_STATUS_CHANGED)
+                        .referenceId(event.conferenceId())
+                        .build();
+
+                log.debug("Sending reminder to {}", email);
+                notificationService.processAndSaveNotification(notification);
+            }
         }
     }
 
