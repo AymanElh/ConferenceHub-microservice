@@ -1,6 +1,6 @@
 package com.conferenchub.conferenceservice.conference.controller;
 
-import com.conferenchub.conferenceservice.conference.entity.Review;
+import com.conferenchub.conferenceservice.conference.dto.request.CreateReviewDto;
 import com.conferenchub.conferenceservice.conference.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +17,9 @@ public class ReviewController {
     @PostMapping("/conference/{conferenceId}")
     public ResponseEntity<Void> addReview(
             @PathVariable Long conferenceId,
-            @RequestBody @Valid Review review) {
+            @RequestBody @Valid CreateReviewDto reviewDto) {
 
-        reviewService.addReview(conferenceId, review);
+        reviewService.addReview(conferenceId, reviewDto);
         return ResponseEntity.noContent().build();
     }
 }

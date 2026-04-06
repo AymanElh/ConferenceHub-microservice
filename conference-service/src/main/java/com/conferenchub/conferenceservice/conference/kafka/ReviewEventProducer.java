@@ -12,24 +12,23 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ConferenceEventProducer {
-
+public class ReviewEventProducer {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @Value("${application.kafka.topic.conference:conference-events}")
-    private String conferenceTopic;
+    @Value("${application.kafka.topic.review:review-events}")
+    private String reviewTopic;
 
-    public void publishConferenceCreated(ConferenceCreatedEvent event) {
-        log.info("Publishing ConferenceCreatedEvent for conference id={} title={}",
-                event.conferenceId(), event.titre());
+    public void publishReviewCreated(NewReviewEvent reviewEvent) {
+        log.info("Publishing NewReviewEvent for conference id={} reviewId={}",
+                reviewEvent.conferenceId(), reviewEvent.reviewId());
 
-        Message<ConferenceCreatedEvent> message = MessageBuilder
-                .withPayload(event)
-                .setHeader(KafkaHeaders.TOPIC, conferenceTopic)
+        Message<NewReviewEvent> message = MessageBuilder
+                .withPayload(reviewEvent)
+                .setHeader(KafkaHeaders.TOPIC, reviewTopic)
                 .build();
 
         kafkaTemplate.send(message);
 
-        log.info("ConferenceCreatedEvent published successfully to topic '{}'", conferenceTopic);
+        log.info("NewReviewEvent published successfully to topic '{}'", reviewTopic);
     }
 }

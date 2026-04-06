@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 
-public interface keynoteRepository extends JpaRepository<Keynote,Long> {
+public interface KeynoteRepository extends JpaRepository<Keynote,Long> {
     boolean existsByEmail(String email);
     @Query("""
         SELECT k FROM Keynote k

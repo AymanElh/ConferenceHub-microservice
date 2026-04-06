@@ -19,6 +19,6 @@ USER spring:spring
 
 COPY --from=builder /build/Keynote-service/target/*.jar app.jar
 
-EXPOSE 8761
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]

@@ -35,7 +35,6 @@ public class ConferenceServiceImpl implements ConferenceService {
     private final ConferenceMapper mapper;
     private final ConferenceEventProducer eventProducer;
     private final KeynoteClient keynoteClient;
-    private final ConferenceMapper conferenceMapper;
 
     @Override
     public ConferenceResponse createConference(CreateConferenceRequest request) {
@@ -72,7 +71,7 @@ public class ConferenceServiceImpl implements ConferenceService {
         log.debug("Publishing event: {}", event);
         eventProducer.publishConferenceCreated(event);
 
-        return mapper.toResponse(conferenceRepository.save(conference));
+        return mapper.toResponse(saved);
     }
 
     @Override

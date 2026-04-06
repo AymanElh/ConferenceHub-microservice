@@ -130,7 +130,7 @@ run-discovery:
 	mvn -pl discovery-service spring-boot:run
 
 run-gateway:
-	mvn -pl getway-service spring-boot:run
+	mvn -pl gateway-service spring-boot:run
 
 run-keynote:
 	mvn -pl Keynote-service spring-boot:run

@@ -6,7 +6,7 @@ import org.example.keynoteservice.dto.KeynoteDTO;
 import org.example.keynoteservice.kafka.KeynoteProducer;
 import org.example.keynoteservice.kafka.KeynoteWelcomeEvent;
 import org.example.keynoteservice.model.Keynote;
-import org.example.keynoteservice.repositroy.keynoteRepository;
+import org.example.keynoteservice.repositroy.KeynoteRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KeynoteService implements IKeynoteService {
 
-    private final keynoteRepository keynoteRepository;
+    private final KeynoteRepository keynoteRepository;
     private final KeynoteMapper keynoteMapper;
     private final KeynoteProducer keynoteProducer;
 

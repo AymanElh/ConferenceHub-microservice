@@ -37,7 +37,7 @@
         <module>discovery-service</module>
         <module>Keynote-service</module>
         <module>notification-service</module>
-        <module>getway-service</module>
+        <module>gateway-service</module>
         <module>conference-service</module>
     </modules>
 
