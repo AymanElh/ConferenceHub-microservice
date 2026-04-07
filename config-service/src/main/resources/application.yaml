@@ -8,9 +8,11 @@ spring:
           uri: ${CONFIG_GIT_URI}
           username: ${CONFIG_GIT_USER}
           password: ${CONFIG_GIT_PASSWORD}
+          clone-on-start: true
           force-pull: true
-          search-paths: "*"
-          default-label: main
+          # Add this — tells JGit to skip SSH and use HTTPS auth
+          skip-ssl-validation: false
+          timeout: 10
 
 logging:
   level:
