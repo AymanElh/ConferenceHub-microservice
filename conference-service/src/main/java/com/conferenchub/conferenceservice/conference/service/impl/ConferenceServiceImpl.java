@@ -167,6 +167,7 @@ public class ConferenceServiceImpl implements ConferenceService {
                     .map(Inscription::getParticipantEmail)
                     .collect(Collectors.toList());
 
+            log.debug("Emails: {}", emails);
             ConferenceStatusChangedEvent event = new ConferenceStatusChangedEvent(
                     "CONFERENCE_STATUS_CHANGED",
                     LocalDateTime.now(),

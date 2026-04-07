@@ -1,6 +1,7 @@
 package com.conferenchub.conferenceservice.conference.service.impl;
 
 import com.conferenchub.conferenceservice.conference.dto.request.CreateInscriptionDto;
+import com.conferenchub.conferenceservice.conference.dto.response.InscriptionResponse;
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.Inscription;
 import com.conferenchub.conferenceservice.conference.entity.InscriptionStatus;
@@ -13,6 +14,8 @@ import com.conferenchub.conferenceservice.conference.service.InscriptionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -54,5 +57,14 @@ public class InscriptionServiceImpl implements InscriptionService {
 
         conference.setRegisteredNumber(conference.getRegisteredNumber() + 1);
         conferenceRepository.save(conference);
+    }
+
+    @Override
+    public List<InscriptionResponse> getByConferenceId(Long conferenceId) {
+        if (!conferenceRepository.existsById(conferenceId)) {
+            throw new RuntimeException("Conference not found with id: " + conferenceId);
+        }
+        List<Inscription> inscriptions = inscriptionRepository.findByConferenceId(conferenceId);
+        return inscriptionMapper.toResponseList(inscriptions);
     }
 }
