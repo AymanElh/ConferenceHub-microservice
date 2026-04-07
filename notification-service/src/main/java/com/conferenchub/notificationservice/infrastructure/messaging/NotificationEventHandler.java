@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -45,7 +47,8 @@ public class NotificationEventHandler {
     }
 
     @KafkaListener(topics = "${application.kafka.topic.conference:conference-events}", groupId = "notification-group")
-    public void handleConferenceEvents(String messageJson) {
+    public void handleConferenceEvents(ConsumerRecord<String, String> record) {
+        String messageJson = record.value();
         try {
             // First, peek at the eventType
             var node = objectMapper.readTree(messageJson);
@@ -92,25 +95,49 @@ public class NotificationEventHandler {
     private void processConferenceStatusChanged(ConferenceStatusChangedEventDTO event) {
         log.info("Processing ConferenceStatusChangedEvent for conferenceId: {} with status: {}", event.conferenceId(), event.status());
 
-        if ("EN_COURS".equals(event.status())) {
-            List<String> participants = event.participantEmails();
-            if (participants == null || participants.isEmpty()) {
-                log.warn("No participants to notify for conference {}", event.conferenceId());
+        List<String> participants = event.participantEmails();
+        if (participants == null || participants.isEmpty()) {
+            log.warn("No participants to notify for conference {}", event.conferenceId());
+            return;
+        }
+
+        String subject;
+        String content;
+        EventType eventType;
+
+        switch (event.status()) {
+            case "EN_COURS" -> {
+                subject = "Rappel: Votre conférence commence !";
+                content = String.format("La conférence '%s' a maintenant commencé (EN COURS). Ne la manquez pas !", event.title());
+                eventType = EventType.CONFERENCE_STATUS_CHANGED;
+            }
+            case "ANNULE" -> {
+                subject = "Conférence annulée";
+                content = String.format("Nous sommes au regret de vous informer que la conférence '%s' a été annulée.", event.title());
+                eventType = EventType.CONFERENCE_CANCELLED;
+            }
+            case "TERMINE" -> {
+                subject = "Merci d'avoir participé !";
+                content = String.format("La conférence '%s' est maintenant terminée. Merci pour votre participation !", event.title());
+                eventType = EventType.CONFERENCE_COMPLETED;
+            }
+            default -> {
+                log.warn("Unhandled status: {}", event.status());
                 return;
             }
+        }
 
-            for (String email : participants) {
-                Notification notification = Notification.builder()
-                        .destinataire(email)
-                        .sujet("Rappel: Votre conférence commence !")
-                        .contenu(String.format("La conférence '%s' a maintenant commencé (EN COURS). Ne la manquez pas !", event.title()))
-                        .typeEvenement(EventType.CONFERENCE_STATUS_CHANGED)
-                        .referenceId(event.conferenceId())
-                        .build();
+        for (String email : participants) {
+            Notification notification = Notification.builder()
+                    .destinataire(email)
+                    .sujet(subject)
+                    .contenu(content)
+                    .typeEvenement(eventType)
+                    .referenceId(event.conferenceId())
+                    .build();
 
-                log.debug("Sending reminder to {}", email);
-                notificationService.processAndSaveNotification(notification);
-            }
+            log.debug("Sending {} notification to {}", event.status(), email);
+            notificationService.processAndSaveNotification(notification);
         }
     }
 

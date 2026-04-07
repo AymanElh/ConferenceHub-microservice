@@ -162,10 +162,17 @@ public class ConferenceServiceImpl implements ConferenceService {
         conference.setStatus(status);
         Conference saved = conferenceRepository.save(conference);
 
-        if (status == ConferenceStatus.IN_PROGRESS) {
+        if (status == ConferenceStatus.IN_PROGRESS || status == ConferenceStatus.CANCELLED || status == ConferenceStatus.COMPLETED) {
             List<String> emails = saved.getInscriptions().stream()
                     .map(Inscription::getParticipantEmail)
                     .collect(Collectors.toList());
+
+            String statusLabel = switch (status) {
+                case IN_PROGRESS -> "EN_COURS";
+                case CANCELLED -> "ANNULE";
+                case COMPLETED -> "TERMINE";
+                default -> status.name();
+            };
 
             log.debug("Emails: {}", emails);
             ConferenceStatusChangedEvent event = new ConferenceStatusChangedEvent(
@@ -173,11 +180,11 @@ public class ConferenceServiceImpl implements ConferenceService {
                     LocalDateTime.now(),
                     saved.getId(),
                     saved.getTitle(),
-                    "EN_COURS",
+                    statusLabel,
                     emails
             );
 
-            log.info("Publishing status changed event for conference {}: status=EN_COURS", saved.getId());
+            log.info("Publishing status changed event for conference {}: status={}", saved.getId(), statusLabel);
             eventProducer.publishConferenceStatusChanged(event);
         }
 
