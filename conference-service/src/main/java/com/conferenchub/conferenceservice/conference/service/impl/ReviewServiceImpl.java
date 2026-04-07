@@ -2,6 +2,7 @@ package com.conferenchub.conferenceservice.conference.service.impl;
 
 import com.conferenchub.conferenceservice.conference.client.KeynoteClient;
 import com.conferenchub.conferenceservice.conference.dto.request.CreateReviewDto;
+import com.conferenchub.conferenceservice.conference.dto.response.KeynoteResponse;
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.Review;
 import com.conferenchub.conferenceservice.conference.kafka.event.NewReviewEvent;
@@ -11,10 +12,11 @@ import com.conferenchub.conferenceservice.conference.repository.ConferenceReposi
 import com.conferenchub.conferenceservice.conference.repository.ReviewRepository;
 import com.conferenchub.conferenceservice.conference.service.ConferenceService;
 import com.conferenchub.conferenceservice.conference.service.ReviewService;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,19 +31,25 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewEventProducer reviewEventProducer;
     private final KeynoteClient keynoteClient;
 
-    @Transactional
     @Override
     public void addReview(Long conferenceId, CreateReviewDto reviewDto){
         Conference conference = conferenceRepository.findById(conferenceId)
                 .orElseThrow(() -> new RuntimeException("Conference not found"));
 
+        List<String> keynoteEmails = Collections.emptyList();
+        
+        if (conference.getKeynoteIds() != null && !conference.getKeynoteIds().isEmpty()) {
+            keynoteEmails = keynoteClient.getKeynotesByIds(conference.getKeynoteIds()).stream()
+                    .map(KeynoteResponse::getEmail)
+                    .collect(Collectors.toList());
+        }
+
         Review review = reviewMapper.toEntity(reviewDto);
         review.setConference(conference);
         reviewRepository.save(review);
-
-        List<String> keynoteEmails = conference.getKeynoteIds().stream()
-                .map(id -> keynoteClient.getKeynoteById(id).getEmail())
-                .collect(Collectors.toList());
+        
+        // Update score separately
+        conferenceService.updateScore(conferenceId);
 
         NewReviewEvent event = new NewReviewEvent(
             "NEW_REVIEW",
@@ -55,8 +63,5 @@ public class ReviewServiceImpl implements ReviewService {
         );
 
         reviewEventProducer.publishReviewCreated(event);
-
-
-        conferenceService.updateScore(conferenceId);
     }
 }

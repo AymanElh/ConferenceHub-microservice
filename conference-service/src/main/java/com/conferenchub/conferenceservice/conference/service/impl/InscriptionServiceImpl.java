@@ -53,7 +53,7 @@ public class InscriptionServiceImpl implements InscriptionService {
                 email,
                 name
         );
-         newInscriptionEventProducer.publishConferenceCreated(inscriptionEvent);
+         newInscriptionEventProducer.publishNewInscription(inscriptionEvent);
 
         conference.setRegisteredNumber(conference.getRegisteredNumber() + 1);
         conferenceRepository.save(conference);

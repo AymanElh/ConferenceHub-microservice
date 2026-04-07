@@ -8,7 +8,9 @@ spring:
           uri: ${CONFIG_GIT_URI}
           username: ${CONFIG_GIT_USER}
           password: ${CONFIG_GIT_PASSWORD}
-          clone-on-start: true
+          force-pull: true
+          search-paths: "*"
+          default-label: main
 
 logging:
   level:

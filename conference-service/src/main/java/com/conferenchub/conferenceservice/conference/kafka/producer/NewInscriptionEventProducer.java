@@ -20,7 +20,7 @@ public class NewInscriptionEventProducer {
     @Value("${application.kafka.topic.inscription:inscription-events}")
     private String conferenceTopic;
 
-    public void publishConferenceCreated(NewInscriptionEvent inscriptionEvent) {
+    public void publishNewInscription(NewInscriptionEvent inscriptionEvent) {
         log.info("Publishing NewInscriptionEvent for conference id={} participantEmail={}",
                 inscriptionEvent.conferenceId(), inscriptionEvent.participantEmail());
 

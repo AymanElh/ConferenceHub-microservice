@@ -11,6 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -87,5 +90,12 @@ public class KeynoteService implements IKeynoteService {
     @Override
     public boolean existsByEmail(String email) {
         return keynoteRepository.existsByEmail(email);
+    }
+
+    @Override
+    public List<KeynoteDTO> findByIds(List<Long> ids) {
+        return keynoteRepository.findAllById(ids).stream()
+                .map(keynoteMapper::toDto)
+                .collect(Collectors.toList());
     }
 }

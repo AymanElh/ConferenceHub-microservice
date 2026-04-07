@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Sort;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/keynotes")
 @RequiredArgsConstructor
@@ -40,6 +42,11 @@ public class KeynoteController {
     @GetMapping("/{id}")
     public ResponseEntity<KeynoteDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(keynoteService.findById(id));
+    }
+
+    @GetMapping("/batch")
+    public ResponseEntity<List<KeynoteDTO>> findByIds(@RequestParam List<Long> ids) {
+        return ResponseEntity.ok(keynoteService.findByIds(ids));
     }
 
     @GetMapping

@@ -124,7 +124,10 @@ mail-up:
 # ── Local Services (Maven) ──────────────────────────────────────
 
 run-config:
-	mvn -pl config-service spring-boot:run
+	mvn -pl config-service spring-boot:run \
+	  -Dspring.cloud.config.server.git.uri=$(CONFIG_GIT_URI) \
+	  -Dspring.cloud.config.server.git.username=$(CONFIG_GIT_USER) \
+	  -Dspring.cloud.config.server.git.password=$(CONFIG_GIT_PASSWORD)
 
 run-discovery:
 	mvn -pl discovery-service spring-boot:run
