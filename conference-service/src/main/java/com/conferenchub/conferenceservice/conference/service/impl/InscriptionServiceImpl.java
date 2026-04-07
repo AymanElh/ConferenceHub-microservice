@@ -5,8 +5,8 @@ import com.conferenchub.conferenceservice.conference.dto.response.InscriptionRes
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.Inscription;
 import com.conferenchub.conferenceservice.conference.entity.InscriptionStatus;
-import com.conferenchub.conferenceservice.conference.kafka.NewInscriptionEvent;
-import com.conferenchub.conferenceservice.conference.kafka.NewInscriptionEventProducer;
+import com.conferenchub.conferenceservice.conference.kafka.event.NewInscriptionEvent;
+import com.conferenchub.conferenceservice.conference.kafka.producer.NewInscriptionEventProducer;
 import com.conferenchub.conferenceservice.conference.mapper.InscriptionMapper;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
 import com.conferenchub.conferenceservice.conference.repository.InscriptionRepository;

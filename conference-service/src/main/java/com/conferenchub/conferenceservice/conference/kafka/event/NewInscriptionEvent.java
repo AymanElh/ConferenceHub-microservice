@@ -1,4 +1,4 @@
-package com.conferenchub.conferenceservice.conference.kafka;
+package com.conferenchub.conferenceservice.conference.kafka.event;
 
 import java.time.LocalDateTime;
 

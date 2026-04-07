@@ -1,4 +1,7 @@
-package com.conferenchub.conferenceservice.conference.kafka;
+package com.conferenchub.conferenceservice.conference.kafka.producer;
+    
+import com.conferenchub.conferenceservice.conference.kafka.event.ConferenceCreatedEvent;
+import com.conferenchub.conferenceservice.conference.kafka.event.ConferenceStatusChangedEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

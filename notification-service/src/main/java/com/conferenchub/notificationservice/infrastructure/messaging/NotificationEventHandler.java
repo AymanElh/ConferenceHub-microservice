@@ -155,14 +155,24 @@ public class NotificationEventHandler {
     @KafkaListener(topics = "review-events", groupId = "notification-group")
     public void handleReviewSubmitted(ReviewSubmittedEventDTO event) {
         log.info("Received ReviewSubmittedEvent for conferenceId: {}", event.conferenceId());
-        Notification notification = Notification.builder()
-                .destinataire("keynote-placeholder@conferencehub.com") // We would need keynote email
-                .sujet("Nouvel avis sur votre conférence")
-                .contenu(String.format("Vous avez reçu un avis de %s avec une note de %d.", event.auteurEmail(), event.stars()))
-                .typeEvenement(EventType.REVIEW_SUBMITTED)
-                .referenceId(event.reviewId())
-                .build();
-        notificationService.processAndSaveNotification(notification);
+
+        if (event.keynoteEmails() == null || event.keynoteEmails().isEmpty()) {
+            log.warn("No keynote emails found for conferenceId: {}", event.conferenceId());
+            return;
+        }
+
+        for (String keynoteEmail : event.keynoteEmails()) {
+            Notification notification = Notification.builder()
+                    .destinataire(keynoteEmail)
+                    .sujet("Nouvel avis sur votre conférence")
+                    .contenu(String.format("Vous avez reçu un avis de %s avec une note de %d.", event.authorEmail(), event.stars()))
+                    .typeEvenement(EventType.REVIEW_SUBMITTED)
+                    .referenceId(event.reviewId())
+                    .build();
+
+            log.debug("Sending ReviewSubmitted notification to keynote: {}", keynoteEmail);
+            notificationService.processAndSaveNotification(notification);
+        }
     }
 
     @KafkaListener(topics = "inscription-events", groupId = "notification-group")
