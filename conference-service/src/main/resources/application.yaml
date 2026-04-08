@@ -2,8 +2,56 @@ spring:
   application:
     name: conference-service
 
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}"
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+        ignore-exceptions:
+          - feign.FeignException.NotFound
+          - com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException
+        recordExceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - feign.RetryableException
+    instances:
+      keynote-service: # The name of your @FeignClient
+        baseConfig: default
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+    instances:
+      keynote-service:
+        baseConfig: default
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
 
 logging:
   level:

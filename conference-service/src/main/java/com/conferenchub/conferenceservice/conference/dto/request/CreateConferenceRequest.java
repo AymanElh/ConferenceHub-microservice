@@ -3,6 +3,7 @@ package com.conferenchub.conferenceservice.conference.dto.request;
 import com.conferenchub.conferenceservice.conference.entity.ConferenceType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -27,5 +28,6 @@ public class CreateConferenceRequest {
     @Min(1)
     private Integer duration;
 
+    @NotEmpty(message = "At least one keynote is required")
     private List<Long> keynoteIds;
 }

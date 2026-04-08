@@ -52,4 +52,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
+
+    @ExceptionHandler(KeynoteServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleKeynoteServiceUnavailable(
+            KeynoteServiceUnavailableException ex) {
+        log.error("Keynote service unavailable: {}", ex.getMessage());
+        ApiError error = new ApiError(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Downstream Service Unavailable",
+                ex.getMessage(),
+                Instant.now());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
 }

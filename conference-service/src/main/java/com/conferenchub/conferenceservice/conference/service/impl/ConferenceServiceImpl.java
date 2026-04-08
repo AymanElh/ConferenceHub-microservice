@@ -10,11 +10,14 @@ import com.conferenchub.conferenceservice.conference.entity.ConferenceType;
 import com.conferenchub.conferenceservice.conference.entity.Review;
 import com.conferenchub.conferenceservice.conference.exception.ConferenceNotFoundException;
 import com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException;
+import com.conferenchub.conferenceservice.conference.exception.KeynoteServiceUnavailableException;
 import com.conferenchub.conferenceservice.conference.kafka.event.ConferenceCreatedEvent;
 import com.conferenchub.conferenceservice.conference.kafka.producer.ConferenceEventProducer;
 import com.conferenchub.conferenceservice.conference.kafka.event.ConferenceStatusChangedEvent;
 import com.conferenchub.conferenceservice.conference.entity.Inscription;
+
 import java.time.LocalDateTime;
+
 import com.conferenchub.conferenceservice.conference.mapper.ConferenceMapper;
 import com.conferenchub.conferenceservice.conference.repository.ConferenceRepository;
 import com.conferenchub.conferenceservice.conference.service.ConferenceService;
@@ -27,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,9 +50,24 @@ public class ConferenceServiceImpl implements ConferenceService {
             request.getKeynoteIds().forEach(id -> {
                 try {
                     keynoteClient.getKeynoteById(id);
-                } catch (
-                        FeignException e) {
-                    throw new KeynoteNotFoundException("Keynote with id " + id + " not found");
+
+                } catch (FeignException.NotFound e) {
+                    // Keynote doesn't exist — this is expected when user provides invalid ID
+                    log.debug("Keynote with id={} not found on keynote-service", id);
+                    throw new KeynoteNotFoundException(
+                            "Keynote with id " + id + " not found");
+
+                } catch (KeynoteServiceUnavailableException e) {
+                    // Circuit is OPEN — the keynote-service is down
+                    log.warn("Keynote-service is unavailable, cannot verify keynote id={}", id);
+                    throw e;
+
+                } catch (FeignException e) {
+                    // Any other Feign exception (5xx, timeout, connection error, etc.)
+                    log.error("Feign error while verifying keynote id={}: {}", id, e.getMessage());
+                    throw new KeynoteServiceUnavailableException(
+                            "Cannot create conference: keynote-service is temporarily unavailable. " +
+                                    "Please try again in a few moments.");
                 }
             });
         }
@@ -82,22 +101,51 @@ public class ConferenceServiceImpl implements ConferenceService {
         Conference conference = conferenceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Conference not found with id: " + id));
 
-        List<KeynoteResponse> keynotes = conference.getKeynoteIds().stream()
-                .map(keynoteId -> {
-                    try {
-                        return keynoteClient.getKeynoteById(keynoteId);
-                    } catch (FeignException e) {
-                        log.warn("Failed to fetch keynote with id {}", keynoteId, e);
-                        return null;
-                    }
-                })
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toList());
+        ConferenceResponse response = mapper.toResponse(conference);
 
-        ConferenceResponse resp =  mapper.toResponse(conference);
-        resp.setKeynotes(keynotes);
+        if (conference.getKeynoteIds() == null || conference.getKeynoteIds().isEmpty()) {
+            response.setKeynotes(List.of());
+            return response;
+        }
 
-        return resp;
+        try {
+            // Happy path — keynote-service is available
+            List<KeynoteResponse> keynotes = conference.getKeynoteIds().stream()
+                    .map(keynoteId -> {
+                        try {
+                            return keynoteClient.getKeynoteById(keynoteId);
+                        } catch (FeignException.NotFound e) {
+                            log.warn("Keynote id={} no longer exists", keynoteId);
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            response.setKeynotes(keynotes);
+
+        } catch (KeynoteServiceUnavailableException e) {
+            // Circuit is OPEN — keynote-service is down
+            // Don't return empty array silently. Give the user context.
+            log.warn("keynote-service unavailable — returning conference without keynote details");
+
+            // Option A: Return degraded placeholder keynotes (better UX)
+            List<KeynoteResponse> degradedKeynotes = conference.getKeynoteIds().stream()
+                    .map(keynoteId -> {
+                        KeynoteResponse placeholder = new KeynoteResponse();
+                        placeholder.setId(keynoteId);
+                        placeholder.setNom("Temporarily Unavailable");
+                        placeholder.setPrenom("");
+                        placeholder.setEmail("N/A");
+                        placeholder.setFonction("N/A");
+                        return placeholder;
+                    })
+                    .collect(Collectors.toList());
+
+            response.setKeynotes(degradedKeynotes);
+        }
+
+        return response;
     }
 
     @Override
