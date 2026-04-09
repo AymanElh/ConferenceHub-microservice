@@ -127,3 +127,25 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: conference-jenkins
+    restart: unless-stopped
+    privileged: true
+    user: root
+    ports:
+      - "9090:8080"     # Jenkins UI
+      - "50000:50000"   # Agent communication
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # Docker-in-Docker
+      - /usr/bin/docker:/usr/bin/docker              # Docker CLI
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks:
+      - conference-network
+
+volumes:
+  jenkins-data:
