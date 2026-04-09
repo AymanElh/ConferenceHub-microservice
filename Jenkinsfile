@@ -116,7 +116,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
+                withDockerRegistry(credentialsId: 'docker-hub-credentials', url: '') {
                     sh """
                         docker push ${DOCKER_REGISTRY}/conferencehub-config:${BUILD_NUMBER}
                         docker push ${DOCKER_REGISTRY}/conferencehub-config:latest
