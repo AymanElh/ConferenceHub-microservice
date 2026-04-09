@@ -51,20 +51,11 @@ public class ConferenceServiceImpl implements ConferenceService {
                 try {
                     keynoteClient.getKeynoteById(id);
 
-                } catch (FeignException.NotFound e) {
-                    // Keynote doesn't exist — this is expected when user provides invalid ID
-                    log.debug("Keynote with id={} not found on keynote-service", id);
-                    throw new KeynoteNotFoundException(
-                            "Keynote with id " + id + " not found");
-
-                } catch (KeynoteServiceUnavailableException e) {
-                    // Circuit is OPEN — the keynote-service is down
-                    log.warn("Keynote-service is unavailable, cannot verify keynote id={}", id);
-                    throw e;
-
-                } catch (FeignException e) {
-                    // Any other Feign exception (5xx, timeout, connection error, etc.)
-                    log.error("Feign error while verifying keynote id={}: {}", id, e.getMessage());
+                } catch (KeynoteNotFoundException e) {
+                    log.debug("Keynote with id={} not found", id);
+                    throw e; // Propagate 404
+                } catch (FeignException | KeynoteServiceUnavailableException e) {
+                    log.error("Error while verifying keynote id={}: {}", id, e.getMessage());
                     throw new KeynoteServiceUnavailableException(
                             "Cannot create conference: keynote-service is temporarily unavailable. " +
                                     "Please try again in a few moments.");
@@ -114,7 +105,7 @@ public class ConferenceServiceImpl implements ConferenceService {
                     .map(keynoteId -> {
                         try {
                             return keynoteClient.getKeynoteById(keynoteId);
-                        } catch (FeignException.NotFound e) {
+                        } catch (FeignException.NotFound | KeynoteNotFoundException e) {
                             log.warn("Keynote id={} no longer exists", keynoteId);
                             return null;
                         }
@@ -125,24 +116,18 @@ public class ConferenceServiceImpl implements ConferenceService {
             response.setKeynotes(keynotes);
 
         } catch (KeynoteServiceUnavailableException e) {
-            // Circuit is OPEN — keynote-service is down
-            // Don't return empty array silently. Give the user context.
-            log.warn("keynote-service unavailable — returning conference without keynote details");
-
-            // Option A: Return degraded placeholder keynotes (better UX)
-            List<KeynoteResponse> degradedKeynotes = conference.getKeynoteIds().stream()
-                    .map(keynoteId -> {
-                        KeynoteResponse placeholder = new KeynoteResponse();
-                        placeholder.setId(keynoteId);
-                        placeholder.setNom("Temporarily Unavailable");
-                        placeholder.setPrenom("");
-                        placeholder.setEmail("N/A");
-                        placeholder.setFonction("N/A");
-                        return placeholder;
-                    })
-                    .collect(Collectors.toList());
-
-            response.setKeynotes(degradedKeynotes);
+            log.warn("Keynote service unavailable during conference retrieval. Using placeholders for keynotes.");
+            List<KeynoteResponse> placeholders = conference.getKeynoteIds().stream()
+                    .map(knId -> {
+                        KeynoteResponse p = new KeynoteResponse();
+                        p.setId(knId);
+                        p.setNom("Service Unavailable");
+                        p.setPrenom("(Resilience)");
+                        return p;
+                    }).collect(Collectors.toList());
+            response.setKeynotes(placeholders);
+        } catch (Exception e) {
+            log.error("Unexpected error while fetching keynotes: {}", e.getMessage());
         }
 
         return response;
@@ -187,9 +172,13 @@ public class ConferenceServiceImpl implements ConferenceService {
                                 .map(keynoteId -> {
                                     try {
                                         return keynoteClient.getKeynoteById(keynoteId);
-                                    } catch (FeignException e) {
-                                        log.warn("Failed to fetch keynote with id {}", keynoteId, e);
-                                        return null;
+                                    } catch (FeignException | KeynoteServiceUnavailableException e) {
+                                        log.warn("Failed to fetch keynote with id {}: {}", keynoteId, e.getMessage());
+                                        KeynoteResponse placeholder = new KeynoteResponse();
+                                        placeholder.setId(keynoteId);
+                                        placeholder.setNom("Service Unavailable");
+                                        placeholder.setPrenom("(Resilience)");
+                                        return placeholder;
                                     }
                                 })
                                 .filter(java.util.Objects::nonNull)

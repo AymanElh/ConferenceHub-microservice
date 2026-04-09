@@ -7,6 +7,7 @@ import org.example.keynoteservice.kafka.KeynoteProducer;
 import org.example.keynoteservice.kafka.KeynoteWelcomeEvent;
 import org.example.keynoteservice.model.Keynote;
 import org.example.keynoteservice.repositroy.KeynoteRepository;
+import org.example.keynoteservice.exception.KeynoteNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -49,7 +50,7 @@ public class KeynoteService implements IKeynoteService {
     @Override
     public KeynoteDTO update(Long id, KeynoteDTO dto) {
         Keynote existing = keynoteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Keynote not found with id: " + id));
+                .orElseThrow(() -> new KeynoteNotFoundException("Keynote not found with id: " + id));
         if (!existing.getEmail().equals(dto.getEmail()) && keynoteRepository.existsByEmail(dto.getEmail())) {
             throw new IllegalArgumentException("Email already exists: " + dto.getEmail());
         }
@@ -63,7 +64,7 @@ public class KeynoteService implements IKeynoteService {
     @Override
     public void delete(Long id) {
         if (!keynoteRepository.existsById(id)) {
-            throw new RuntimeException("Keynote not found with id: " + id);
+            throw new KeynoteNotFoundException("Keynote not found with id: " + id);
         }
         keynoteRepository.deleteById(id);
     }
@@ -83,7 +84,7 @@ public class KeynoteService implements IKeynoteService {
     @Override
     public KeynoteDTO findById(Long id) {
         Keynote keynote = keynoteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Keynote not found with id: " + id));
+                .orElseThrow(() -> new KeynoteNotFoundException("Keynote not found with id: " + id));
         return keynoteMapper.toDto(keynote);
     }
 

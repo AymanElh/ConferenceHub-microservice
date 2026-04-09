@@ -24,7 +24,6 @@ resilience4j:
         slowCallRateThreshold: 100
         slowCallDurationThreshold: 2s
         ignore-exceptions:
-          - feign.FeignException.NotFound
           - com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException
         recordExceptions:
           - java.net.ConnectException

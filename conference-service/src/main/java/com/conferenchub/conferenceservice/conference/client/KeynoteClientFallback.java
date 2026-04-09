@@ -1,6 +1,7 @@
 package com.conferenchub.conferenceservice.conference.client;
 
 import com.conferenchub.conferenceservice.conference.dto.response.KeynoteResponse;
+import com.conferenchub.conferenceservice.conference.exception.KeynoteNotFoundException;
 import com.conferenchub.conferenceservice.conference.exception.KeynoteServiceUnavailableException;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
@@ -18,26 +19,39 @@ public class KeynoteClientFallback implements FallbackFactory<KeynoteClient> {
         return new KeynoteClient() {
             @Override
             public KeynoteResponse getKeynoteById(Long id) {
-                if (cause instanceof FeignException.NotFound || (cause instanceof FeignException && ((FeignException) cause).status() == 404)) {
-                    // Let the 404 propagate to be handled by ConferenceServiceImpl
-                    if (cause instanceof FeignException.NotFound) {
-                        throw (FeignException.NotFound) cause;
-                    }
-                    throw (FeignException) cause;
+                Throwable rootCause = unwrap(cause);
+
+                if (rootCause instanceof KeynoteNotFoundException || rootCause instanceof FeignException.NotFound || (rootCause instanceof FeignException && ((FeignException) rootCause).status() == 404)) {
+                    log.debug("Keynote id={} not found. Propagating 404.", id);
+                    throw (RuntimeException) rootCause;
                 }
 
-                log.warn("Circuit breaker OPEN or service unavailable. Fallback invoked for getKeynoteById(id={}). Cause: {}", id, cause.getMessage());
+                log.warn("Keynote service unavailable for getKeynoteById(id={}). Cause: {}", id, rootCause.getMessage());
                 throw new KeynoteServiceUnavailableException(
-                        "keynote-service is currently unavailable (circuit open). Cannot verify keynote id=" + id);
+                        "keynote-service is currently unavailable (circuit open or system error). Cannot verify keynote id=" + id);
             }
 
             @Override
             public List<KeynoteResponse> getKeynotesByIds(List<Long> ids) {
-                log.warn("Circuit breaker OPEN or service unavailable. Fallback invoked for getKeynotesByIds. Cause: {}", cause.getMessage());
+                Throwable rootCause = unwrap(cause);
+                if (rootCause instanceof KeynoteNotFoundException || rootCause instanceof FeignException.NotFound || (rootCause instanceof FeignException && ((FeignException) rootCause).status() == 404)) {
+                    throw (RuntimeException) rootCause;
+                }
+
+                log.warn("Keynote service unavailable for getKeynotesByIds. Cause: {}", rootCause.getMessage());
                 throw new KeynoteServiceUnavailableException(
-                        "keynote-service is currently unavailable (circuit open). Cannot fetch keynote details.");
+                        "keynote-service is currently unavailable (circuit open or system error). Cannot fetch keynote details.");
             }
         };
+    }
+
+    private Throwable unwrap(Throwable e) {
+        Throwable cause = e;
+        while (cause.getCause() != null && cause != cause.getCause()) {
+            if (cause instanceof FeignException) break;
+            cause = cause.getCause();
+        }
+        return cause;
     }
 }
 
