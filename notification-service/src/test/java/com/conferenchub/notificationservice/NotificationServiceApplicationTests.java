@@ -13,11 +13,18 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import com.conferenchub.notificationservice.domain.repository.NotificationRepository;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.junit.jupiter.api.BeforeEach;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@EmbeddedKafka(partitions = 1)
 @ImportAutoConfiguration(
     exclude = {
         MailSenderAutoConfiguration.class
@@ -30,6 +37,20 @@ class NotificationServiceApplicationTests {
 
     @MockitoBean
     private KafkaTemplate<String, Object> kafkaTemplate;
+
+    @MockitoBean
+    private NotificationRepository notificationRepository;
+
+    @BeforeEach
+    void setUp() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(invocation -> {
+            Notification notification = invocation.getArgument(0);
+            if (notification.getId() == null) {
+                notification.setId("test-notification-id");
+            }
+            return notification;
+        });
+    }
 
 
     @Autowired
