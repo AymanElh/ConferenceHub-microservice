@@ -27,7 +27,7 @@ pipeline {
         stage('Build & Test') {
             // Compile all modules, skip integration tests for speed
             steps {
-                sh 'mvn clean verify -DskipTests=false --batch-mode'
+                sh 'mvn clean verify -DskipTests=false -Dspring.cloud.config.enabled=false --batch-mode'
             }
             post {
                 always {
