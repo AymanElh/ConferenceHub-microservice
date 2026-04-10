@@ -1,0 +1,24 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+      fail-fast: false
+  config:
+    import: ""
+  mongodb:
+    auto-index-creation: false
+    uri: mongodb://localhost:27017/test  # still fails - fix below
+  kafka:
+    bootstrap-servers: localhost:9092
+
+# Disable mail health check
+management:
+  health:
+    mail:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false

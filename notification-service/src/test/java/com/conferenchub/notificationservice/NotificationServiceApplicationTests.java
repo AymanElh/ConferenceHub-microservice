@@ -5,22 +5,32 @@ import com.conferenchub.notificationservice.domain.model.EventType;
 import com.conferenchub.notificationservice.domain.model.Notification;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.bean.override.mockito.MockitoBeans;
+
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@MockitoBeans({
-    @MockitoBean(types = JavaMailSender.class),
-    @MockitoBean(types = KafkaTemplate.class)
-})
+@ImportAutoConfiguration(
+    exclude = {
+        MailSenderAutoConfiguration.class
+    }
+)
 class NotificationServiceApplicationTests {
+
+    @MockitoBean
+    private JavaMailSender javaMailSender;
+
+    @MockitoBean
+    private KafkaTemplate<String, Object> kafkaTemplate;
+
 
     @Autowired
     private NotificationService notificationService;
@@ -38,8 +48,6 @@ class NotificationServiceApplicationTests {
         
         assertNotNull(notification.getId());
     }
-    @Autowired
-    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
 
     @Test
     void testSendKafkaMessage() throws InterruptedException {
