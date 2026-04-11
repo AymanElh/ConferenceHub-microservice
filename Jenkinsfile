@@ -24,7 +24,7 @@ pipeline {
                 sh '''
                     mvn clean verify \
                         --batch-mode \
-                        -Dspring.cloud.enabled=false \
+                        -Dspring.cloud.config.enabled=false \
                         -Dspring.profiles.active=test
                 '''
             }
