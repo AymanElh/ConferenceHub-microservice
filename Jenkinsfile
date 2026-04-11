@@ -40,7 +40,7 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
                         mvn sonar:sonar \
-                             --batch-mode
+                             --batch-mode \
                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                              -Dsonar.projectName="ConferenceHub" \
                              -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml \
@@ -95,7 +95,7 @@ pipeline {
             }
 
             steps {
-                wihCredentials([usernamePassword(
+                withCredentials([usernamePassword(
                     credentialsId: 'docker-hub-credentials',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
