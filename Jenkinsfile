@@ -1,130 +1,88 @@
-// Jenkinsfile — Declarative Pipeline
 pipeline {
     agent any
 
     environment {
-        // Docker Hub or your registry credentials (configured in Jenkins UI)
-        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
-        DOCKER_REGISTRY     = 'conferencehub'
-        MAVEN_OPTS          = '-Xmx1024m'
+        DOCKER_REGISTRY = 'your-dockerhub-username'
+        SONAR_PROJECT_KEY = 'conferencehub'
     }
 
     tools {
-        maven 'Maven-3.9' 
-        jdk   'JDK-17'
+        maven 'Maven-3.9'
+        jdk 'JDK-17'
     }
 
     stages {
-
-        stage('Checkout') {
-            // Jenkins pulls your code from GitHub
+        stage('checkout') {
             steps {
-                checkout scm
-                echo "Branch: ${env.BRANCH_NAME}"
-            }
-        }
-
-        stage('Set Image Tag') {
-            steps {
-                script {
-                    // Logic: main -> latest, dev -> dev, other -> branch-name
-                    if (env.BRANCH_NAME == 'main') {
-                        env.IMAGE_TAG = 'latest'
-                    } else if (env.BRANCH_NAME == 'dev') {
-                        env.IMAGE_TAG = 'dev'
-                    } else {
-                        env.IMAGE_TAG = env.BRANCH_NAME.replaceAll(/[^a-zA-Z0-9]/, "-")
-                    }
-                    echo "Calculated IMAGE_TAG: ${env.IMAGE_TAG}"
-                }
+                checkout scm 
+                echo "Branch: ${env.BRANCH_NAME} | PR: ${env.CHANGE_ID ?: 'none'}"
             }
         }
 
         stage('Build & Test') {
-            // Compile all modules, skip integration tests for speed
             steps {
-                sh 'mvn clean verify -DskipTests=false -Dspring.cloud.config.enabled=false --batch-mode'
+                sh '''
+                    mvn clean verify \
+                        --batch-mode \
+                        -Dspring.cloud.enabled=false \
+                        -Dspring.profiles.active=test
+                '''
             }
             post {
                 always {
-                    // Publish JUnit test results in Jenkins UI
-                    junit '**/target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        mvn sonar:sonar \
+                             --batch-mode
+                             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                             -Dsonar.projectName="ConferenceHub" \
+                             -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml \
+                             -Dsonar.exclusions=**/generated/**,**/target/** \
+                             -Dspring.cloud.config.enabled=false
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
 
         stage('Docker Build') {
-            // Build Docker images for each service
             when {
                 anyOf {
                     branch 'main'
                     branch 'dev'
                 }
             }
-            parallel {
-                stage('config-service') {
-                    steps {
+            steps {
+                script {
+                    def services = [
+                        [name: 'config',       file: 'config-service/Dockerfile'],
+                        [name: 'discovery',    file: 'discovery-service/Dockerfile'],
+                        [name: 'gateway',      file: 'gateway-service/Dockerfile'],
+                        [name: 'keynote',      file: 'Keynote-service/Dockerfile'],
+                        [name: 'conference',   file: 'conference-service/Dockerfile'],
+                        [name: 'notification', file: 'notification-service/Dockerfile']
+                    ]
+
+                    services.each { svc -> 
                         sh """
                             docker build \
-                              -f config-service/Dockerfile \
-                              -t ${DOCKER_REGISTRY}/conferencehub-config:${IMAGE_TAG} \
-                              -t ${DOCKER_REGISTRY}/conferencehub-config:${BUILD_NUMBER} \
-                              .
-                        """
-                    }
-                }
-                stage('discovery-service') {
-                    steps {
-                        sh """
-                            docker build \
-                              -f discovery-service/Dockerfile \
-                              -t ${DOCKER_REGISTRY}/conferencehub-discovery:${IMAGE_TAG} \
-                              -t ${DOCKER_REGISTRY}/conferencehub-discovery:${BUILD_NUMBER} \
-                              .
-                        """
-                    }
-                }
-                stage('gateway-service') {
-                    steps {
-                        sh """
-                            docker build \
-                              -f gateway-service/Dockerfile \
-                              -t ${DOCKER_REGISTRY}/conferencehub-gateway:${IMAGE_TAG} \
-                              -t ${DOCKER_REGISTRY}/conferencehub-gateway:${BUILD_NUMBER} \
-                              .
-                        """
-                    }
-                }
-                stage('keynote-service') {
-                    steps {
-                        sh """
-                            docker build \
-                              -f Keynote-service/Dockerfile \
-                              -t ${DOCKER_REGISTRY}/conferencehub-keynote:${IMAGE_TAG} \
-                              -t ${DOCKER_REGISTRY}/conferencehub-keynote:${BUILD_NUMBER} \
-                              .
-                        """
-                    }
-                }
-                stage('conference-service') {
-                    steps {
-                        sh """
-                            docker build \
-                              -f conference-service/Dockerfile \
-                              -t ${DOCKER_REGISTRY}/conferencehub-conference:${IMAGE_TAG} \
-                              -t ${DOCKER_REGISTRY}/conferencehub-conference:${BUILD_NUMBER} \
-                              .
-                        """
-                    }
-                }
-                stage('notification-service') {
-                    steps {
-                        sh """
-                            docker build \
-                              -f notification-service/Dockerfile \
-                              -t ${DOCKER_REGISTRY}/conferencehub-notification:${IMAGE_TAG} \
-                              -t ${DOCKER_REGISTRY}/conferencehub-notification:${BUILD_NUMBER} \
-                              .
+                                -f ${svc.file} \
+                                -t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:${BUILD_NUMBER} \
+                                -t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:latest \
                         """
                     }
                 }
@@ -132,35 +90,28 @@ pipeline {
         }
 
         stage('Docker Push') {
-            // Push images to Docker Hub
             when {
-                anyOf {
-                    branch 'dev'
-                    branch 'main'
-                }
+                branch 'main'
             }
+
             steps {
-                withDockerRegistry(credentialsId: 'docker-hub-credentials', url: '') {
-                    sh """
-                        docker push ${DOCKER_REGISTRY}/conferencehub-config:${IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-config:${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-discovery:${IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-discovery:${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-gateway:${IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-gateway:${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-keynote:${IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-keynote:${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-conference:${IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-conference:${BUILD_NUMBER}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-notification:${IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/conferencehub-notification:${BUILD_NUMBER}
-                    """
+                wihCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        for svc in config discovery gateway keynote conference notification; do
+                            docker push ${DOCKER_REGISTRY}/conferencehub-${svc}:${BUILD_NUMBER}
+                            docker push ${DOCKER_REGISTRY}/conferencehub-${svc}:latest
+                        done
+                    '''
                 }
             }
         }
 
         stage('Cleanup') {
-            // Remove dangling images to save disk space
             steps {
                 sh 'docker image prune -f'
             }
@@ -169,14 +120,13 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline SUCCESS — Build #${BUILD_NUMBER}"
+            echo "SUCCESS — Branch: ${env.BRANCH_NAME} Build: #${BUILD_NUMBER}"
         }
         failure {
-            echo "Pipeline FAILED — Check logs"
-            // Add email/Slack notification here later
+            echo "FAILED — Branch: ${env.BRANCH_NAME} Build: #${BUILD_NUMBER}"
         }
         always {
-            cleanWs()   // Clean workspace after each build
+            cleanWs()
         }
     }
 }
