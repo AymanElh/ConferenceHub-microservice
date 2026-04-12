@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REGISTRY = 'your-dockerhub-username'
+        DOCKER_REGISTRY = 'aymanelh'
         SONAR_PROJECT_KEY = 'conferencehub'
     }
 
