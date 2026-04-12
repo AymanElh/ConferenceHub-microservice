@@ -13,8 +13,6 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -46,7 +44,7 @@ class NotificationEventHandlerTest {
     }
 
     @Test
-    void handleConferenceEvents_ShouldProcessConferenceCreated() throws Exception {
+    void handleConferenceEvents_ShouldProcessConferenceCreated() {
         // Given
         String json = "{" +
                 "\"eventType\":\"CONFERENCE_CREATED\"," +
@@ -57,11 +55,11 @@ class NotificationEventHandlerTest {
                 "\"date\":\"2024-10-10\"," +
                 "\"statut\":\"PLANNED\"" +
                 "}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, "key", json);
+        ConsumerRecord<String, String> consumerRecord = new ConsumerRecord<>("topic", 0, 0, "key", json);
         ReflectionTestUtils.setField(notificationEventHandler, "managerEmailsCsv", "admin@example.com");
 
         // When
-        notificationEventHandler.handleConferenceEvents(record);
+        notificationEventHandler.handleConferenceEvents(consumerRecord);
 
         // Then
         verify(notificationService, atLeastOnce()).processAndSaveNotification(any(Notification.class));
@@ -78,10 +76,10 @@ class NotificationEventHandlerTest {
                 "\"status\":\"EN_COURS\"," +
                 "\"participantEmails\":[\"user@example.com\"]" +
                 "}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, "key", json);
+        ConsumerRecord<String, String> consumerRecord = new ConsumerRecord<>("topic", 0, 0, "key", json);
 
         // When
-        notificationEventHandler.handleConferenceEvents(record);
+        notificationEventHandler.handleConferenceEvents(consumerRecord);
 
         // Then
         verify(notificationService).processAndSaveNotification(any(Notification.class));
@@ -91,10 +89,10 @@ class NotificationEventHandlerTest {
     void handleConferenceEvents_ShouldIgnoreUnknownType() {
         // Given
         String json = "{\"eventType\":\"UNKNOWN_TYPE\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, "key", json);
+        ConsumerRecord<String, String> consumerRecord = new ConsumerRecord<>("topic", 0, 0, "key", json);
 
         // When
-        notificationEventHandler.handleConferenceEvents(record);
+        notificationEventHandler.handleConferenceEvents(consumerRecord);
 
         // Then
         verify(notificationService, never()).processAndSaveNotification(any());
