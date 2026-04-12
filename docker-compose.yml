@@ -190,7 +190,7 @@ services:
   gateway-service:
     build:
       context: .
-      dockerfile: getway-service/Dockerfile
+      dockerfile: gateway-service/Dockerfile
     container_name: conference-gateway-service
     environment:
       - CONFIG_SERVER_URL=http://config-service:8888
