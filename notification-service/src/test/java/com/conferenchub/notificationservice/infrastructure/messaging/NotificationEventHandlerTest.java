@@ -66,7 +66,7 @@ class NotificationEventHandlerTest {
     }
 
     @Test
-    void handleConferenceEvents_ShouldProcessStatusChanged() throws Exception {
+    void handleConferenceEvents_ShouldProcessStatusChanged() {
         // Given
         String json = "{" +
                 "\"eventType\":\"CONFERENCE_STATUS_CHANGED\"," +
