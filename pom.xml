@@ -29,6 +29,9 @@
 
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
+
+        <micrometer-tracing.version>1.4.4</micrometer-tracing.version>
+        <zipkin-reporter.version>3.4.2</zipkin-reporter.version>
     </properties>
 
     <modules>
@@ -88,6 +91,18 @@
                 <version>${springdoc-openapi.version}</version>
             </dependency>
 
+            <!-- Zipkin tracing -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bridge-brave</artifactId>
+                <version>${micrometer-tracing.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.zipkin.reporter2</groupId>
+                <artifactId>zipkin-reporter-brave</artifactId>
+                <version>${zipkin-reporter.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

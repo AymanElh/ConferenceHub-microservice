@@ -43,9 +43,8 @@ pipeline {
                              --batch-mode \
                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                              -Dsonar.projectName="ConferenceHub" \
-                             -Dsonar.java.binaries=**/target/classes \
                              -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml \
-                             -Dsonar.exclusions=**/generated/**,**/target/** \
+                             -Dsonar.maven.scanAll=true \
                              -Dspring.cloud.config.enabled=false
                     '''
                 }

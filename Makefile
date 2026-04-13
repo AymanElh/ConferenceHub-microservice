@@ -64,7 +64,10 @@ help:
 	@echo "└────────────────────────────────────────────────────────────"
 	@echo ""
 	@echo "┌── Build & Utilities ────────────────────────────────────────"
-	@echo "│  build-all          Build all modules (skips tests)"
+	@echo "│  build-all          Build all modules locally (skips tests)"
+	@echo "│  up-all             Start all microservices (Compose)"
+	@echo "│  up-<svc>           Start specific service (config, discovery,"
+	@echo "│                       gateway, keynote, conference, notification)"
 	@echo "│  clean              Clean all Maven target directories"
 	@echo "│  prod-up            Start full stack in production mode"
 	@echo "│  prod-down          Stop production stack"
@@ -120,6 +123,30 @@ postgres-up:
 ## Start Mailpit SMTP trap
 mail-up:
 	$(COMPOSE_DEV) up -d mailpit
+
+# ── Docker Compose Service Targets ──────────────────────────────
+
+up-config:
+	$(COMPOSE_CMD) up -d config-service
+
+up-discovery:
+	$(COMPOSE_CMD) up -d discovery-service
+
+up-gateway:
+	$(COMPOSE_CMD) up -d gateway-service
+
+up-keynote:
+	$(COMPOSE_CMD) up -d keynote-service
+
+up-conference:
+	$(COMPOSE_CMD) up -d conference-service
+
+up-notification:
+	$(COMPOSE_CMD) up -d notification-service
+
+up-all:
+	$(COMPOSE_CMD) up -d config-service discovery-service gateway-service \
+	                keynote-service conference-service notification-service
 
 # ── Local Services (Maven) ──────────────────────────────────────
 

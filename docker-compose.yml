@@ -193,7 +193,8 @@ services:
       dockerfile: gateway-service/Dockerfile
     container_name: conference-gateway-service
     environment:
-      - CONFIG_SERVER_URL=http://config-service:8888
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
     networks:
       - conference-network
     depends_on:
@@ -215,7 +216,8 @@ services:
       dockerfile: Keynote-service/Dockerfile
     container_name: conference-keynote-service
     environment:
-      - CONFIG_SERVER_URL=http://config-service:8888
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
       - SPRING_DATASOURCE_URL=jdbc:mysql://keynote_db:3306/keynote
       - SPRING_DATASOURCE_USERNAME=${KEYNOTE_DB_USER}
       - SPRING_DATASOURCE_PASSWORD=${KEYNOTE_DB_PASSWORD}
@@ -241,7 +243,8 @@ services:
       dockerfile: conference-service/Dockerfile
     container_name: conference-conference-service
     environment:
-      - CONFIG_SERVER_URL=http://config-service:8888
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
       - CONFERENCE_DB_URL=jdbc:postgresql://conference-db:5432/conference-db
       - CONFERENCE_DB_USER=${CONFERENCE_DB_USER}
       - CONFERENCE_DB_PASSWORD=${CONFERENCE_DB_PASSWORD}
@@ -269,7 +272,8 @@ services:
       dockerfile: notification-service/Dockerfile
     container_name: conference-notification-service
     environment:
-      - CONFIG_SERVER_URL=http://config-service:8888
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MONGO_HOST=mongodb
       - SPRING_DATA_MONGODB_HOST=mongodb

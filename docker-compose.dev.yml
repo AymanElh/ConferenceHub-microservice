@@ -183,6 +183,15 @@ services:
       timeout: 5s
       retries: 5
 
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: conference-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+    networks:
+      - conference-network
+
 
 volumes:
   jenkins-data:
