@@ -4,15 +4,19 @@ spring:
   cloud:
     config:
       server:
+        default-label: main
         git:
           uri: ${CONFIG_GIT_URI}
           username: ${CONFIG_GIT_USER}
           password: ${CONFIG_GIT_PASSWORD}
-          clone-on-start: true
+          clone-on-start: false
           force-pull: true
           # Add this — tells JGit to skip SSH and use HTTPS auth
           skip-ssl-validation: false
           timeout: 10
+          default-label: main
+          try-master-branch: false
+          basedir: /tmp/config-repos
 
 logging:
   level:
@@ -23,6 +27,11 @@ logging:
         cloud:
           config:
             server: DEBUG
+
+management:
+  health:
+    config:
+      enabled: false
 
 server:
   port: 8888

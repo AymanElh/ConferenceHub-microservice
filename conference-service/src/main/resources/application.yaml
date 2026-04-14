@@ -52,6 +52,10 @@ management:
     health:
       show-details: always
 
+  tracing:
+    sampling:
+      probability: 1.0
+
 logging:
   level:
     com.conferenchub.conferenceservice.conference.client: DEBUG
