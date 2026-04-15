@@ -33,15 +33,10 @@
             <scope>test</scope>
         </dependency>
         
-        <!-- Zipkin tracing -->
+        <!-- Zipkin tracing (Boot 4 starter wires tracing + exporter auto-config) -->
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-tracing-bridge-brave</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.zipkin.reporter2</groupId>
-            <artifactId>zipkin-reporter-brave</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-zipkin</artifactId>
         </dependency>
     </dependencies>
 
