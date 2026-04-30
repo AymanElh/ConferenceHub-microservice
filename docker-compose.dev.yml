@@ -192,9 +192,60 @@ services:
     networks:
       - conference-network
 
+  # ── Prometheus (Metrics Collector) ────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: conference-prometheus
+    restart: unless-stopped
+    ports:
+      - "9092:9090"    # Note: conflicts with Jenkins :9090 — change Jenkins to :9091
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+    networks:
+      - conference-network
+
+  # ── Grafana (Dashboard UI) ────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: conference-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - conference-network
+    depends_on:
+      - prometheus
+
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    command:
+      - "--kafka.server=kafka:9094"
+      - "--topic.filter=.*"
+      - "--group.filter=.*"
+    ports:
+      - "9308:9308"
+    depends_on:
+      - kafka
+    networks:
+      - conference-network
 
 volumes:
   jenkins-data:
   sonarqube-data:
   sonarqube-logs:
   sonarqube-pgdata:
+  prometheus-data:
+  grafana-data:

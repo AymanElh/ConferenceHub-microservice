@@ -39,10 +39,14 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
-                        mvn sonar:sonar \
+                        set -eu
+                        echo "SonarQube URL: ${SONAR_HOST_URL:-<unset>}"
+
+                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
                              --batch-mode \
                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                              -Dsonar.projectName="ConferenceHub" \
+                             -Dsonar.host.url="${SONAR_HOST_URL:-http://localhost:9000}" \
                              -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml \
                              -Dsonar.maven.scanAll=true \
                              -Dspring.cloud.config.enabled=false
