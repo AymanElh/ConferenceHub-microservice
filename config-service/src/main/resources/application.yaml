@@ -32,6 +32,13 @@ management:
   health:
     config:
       enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
 
 server:
   port: 8888

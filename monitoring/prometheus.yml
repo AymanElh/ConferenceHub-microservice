@@ -1,0 +1,51 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Config Service
+  - job_name: 'config-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['config-service:8888']
+
+  # Discovery Service
+  - job_name: 'discovery-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['discovery-service:8761']
+
+  # Gateway Service
+  - job_name: 'gateway-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['gateway-service:8881']
+
+  # Keynote Service
+  - job_name: 'keynote-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['keynote-service:8081']
+
+  # Conference Service
+  - job_name: 'conference-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['conference-service:8082']
+
+  # Notification Service
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['notification-service:8083']
+
+
+  - job_name: 'kafka-exporter'
+    static_configs:
+      - targets: [ 'kafka-exporter:9308' ]
