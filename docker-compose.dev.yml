@@ -198,7 +198,7 @@ services:
     container_name: conference-prometheus
     restart: unless-stopped
     ports:
-      - "9092:9090"    # Note: conflicts with Jenkins :9090 — change Jenkins to :9091
+      - "9092:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
