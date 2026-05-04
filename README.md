@@ -31,6 +31,9 @@ The system is composed of several specialized microservices, each responsible fo
 
 ### 🔐 Security & Resilience
 - **Identity Management**: Integrated with **Keycloak** (OAuth2/OIDC) for centralized authentication and role-based access control.
+- **RBAC Roles**:
+  - **`PARTICIPANT`** (default): can browse conferences/keynotes, register to conferences, and add reviews.
+  - **`ADMIN`**: can manage (create/update) conferences, view inscriptions, and create/update/delete keynotes.
 - **Graceful Degradation**: Implements **Resilience4j** circuit breakers and fallback mechanisms to ensure system stability during partial failures.
 
 ### 📡 Event-Driven Excellence

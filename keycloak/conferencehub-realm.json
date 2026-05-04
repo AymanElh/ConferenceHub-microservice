@@ -54,6 +54,7 @@
         "composite": true,
         "composites": {
           "realm": [
+            "PARTICIPANT",
             "offline_access",
             "uma_authorization"
           ],
@@ -64,6 +65,24 @@
             ]
           }
         },
+        "clientRole": false,
+        "containerId": "5e56bf4f-847a-4ee5-97ea-14d10b4bdd29",
+        "attributes": {}
+      },
+      {
+        "id": "2b0c81d6-3a95-40c2-98cd-8ce26c0e2a01",
+        "name": "PARTICIPANT",
+        "description": "Normal user / participant",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "5e56bf4f-847a-4ee5-97ea-14d10b4bdd29",
+        "attributes": {}
+      },
+      {
+        "id": "f64c0f78-3be5-4f7e-8b7c-3f8f0f5b0d47",
+        "name": "ADMIN",
+        "description": "Admin can manage conferences and keynotes",
+        "composite": false,
         "clientRole": false,
         "containerId": "5e56bf4f-847a-4ee5-97ea-14d10b4bdd29",
         "attributes": {}
