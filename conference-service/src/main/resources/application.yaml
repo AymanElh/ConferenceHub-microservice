@@ -9,6 +9,11 @@ spring:
 
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}"
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8080/realms/conferencehub/protocol/openid-connect/certs}
 
 resilience4j:
   circuitbreaker:
