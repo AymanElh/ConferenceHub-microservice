@@ -68,6 +68,7 @@ pipeline {
                 anyOf {
                     branch 'main'
                     branch 'dev'
+                    branch 'staging'
                 }
             }
             steps {
@@ -81,12 +82,22 @@ pipeline {
                         [name: 'notification', file: 'notification-service/Dockerfile']
                     ]
 
-                    services.each { svc -> 
+                    def branchLatestTag = "${env.BRANCH_NAME}-latest"
+
+                    services.each { svc ->
+                        def tags = [
+                            "-t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:${BUILD_NUMBER}",
+                            "-t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:${branchLatestTag}"
+                        ]
+
+                        if (env.BRANCH_NAME == 'main') {
+                            tags << "-t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:latest"
+                        }
+
                         sh """
                             docker build \
                                 -f ${svc.file} \
-                                -t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:${BUILD_NUMBER} \
-                                -t ${DOCKER_REGISTRY}/conferencehub-${svc.name}:latest \
+                                ${tags.join(' \\\n                                ')} \
                                 .
                         """
                     }
@@ -96,7 +107,11 @@ pipeline {
 
         stage('Docker Push') {
             when {
-                branch 'main'
+                anyOf {
+                    branch 'main'
+                    branch 'dev'
+                    branch 'staging'
+                }
             }
 
             steps {
@@ -109,7 +124,10 @@ pipeline {
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         for svc in config discovery gateway keynote conference notification; do
                             docker push ${DOCKER_REGISTRY}/conferencehub-${svc}:${BUILD_NUMBER}
-                            docker push ${DOCKER_REGISTRY}/conferencehub-${svc}:latest
+                            docker push ${DOCKER_REGISTRY}/conferencehub-${svc}:${BRANCH_NAME}-latest
+                            if [ "${BRANCH_NAME}" = "main" ]; then
+                                docker push ${DOCKER_REGISTRY}/conferencehub-${svc}:latest
+                            fi
                         done
                     '''
                 }

@@ -148,6 +148,11 @@ up-all:
 	$(COMPOSE_CMD) up -d config-service discovery-service gateway-service \
 	                keynote-service conference-service notification-service
 
+build-all:
+	$(COMPOSE_CMD)  up --build -d config-service discovery-service gateway-service \
+                        keynote-service conference-service notification-service
+
+
 # ── Local Services (Maven) ──────────────────────────────────────
 
 run-config:
@@ -173,7 +178,7 @@ run-notification:
 
 # ── Build & Clean ───────────────────────────────────────────────
 
-build-all:
+install-all:
 	mvn clean install -DskipTests
 
 clean:
