@@ -7,6 +7,8 @@ import org.example.keynoteservice.exception.KeynoteNotFoundException;
 import org.example.keynoteservice.service.IKeynoteService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,7 +29,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(KeynoteController.class)
+@WebMvcTest(
+        controllers = KeynoteController.class,
+        excludeAutoConfiguration = OAuth2ResourceServerAutoConfiguration.class
+)
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 public class KeynoteControllerTest {
     @Autowired

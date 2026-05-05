@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.Message;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -16,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 public class KeynoteProducerTest {
 
     @Mock
