@@ -2,13 +2,20 @@
 FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 WORKDIR /build
 
-COPY pom.xml .
-COPY gateway-service/pom.xml gateway-service/
-WORKDIR /build/gateway-service
-RUN mvn dependency:go-offline
+# Copy root pom (dependency management)
+COPY pom.xml ./pom.xml
 
-COPY gateway-service/src src
-RUN mvn clean package -DskipTests
+# Copy only this service's pom for layer caching
+COPY gateway-service/pom.xml ./gateway-service/pom.xml
+
+# Download deps only (cached if pom unchanged)
+RUN mvn dependency:go-offline -pl gateway-service -am --batch-mode
+
+# Copy source
+COPY gateway-service/src ./gateway-service/src
+
+# Build only this module
+RUN mvn clean package -pl gateway-service -DskipTests --batch-mode
 
 # Stage 2: Run
 FROM eclipse-temurin:17-jre-alpine
