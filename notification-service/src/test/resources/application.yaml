@@ -1,4 +1,13 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
+      - org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
+      - org.springframework.boot.mongodb.autoconfigure.MongoReactiveAutoConfiguration
+      - org.springframework.boot.data.mongodb.autoconfigure.DataMongoAutoConfiguration
+      - org.springframework.boot.data.mongodb.autoconfigure.DataMongoRepositoriesAutoConfiguration
+      - org.springframework.boot.data.mongodb.autoconfigure.DataMongoReactiveAutoConfiguration
+      - org.springframework.boot.data.mongodb.autoconfigure.DataMongoReactiveRepositoriesAutoConfiguration
   cloud:
     config:
       enabled: false
@@ -10,6 +19,10 @@ spring:
     uri: mongodb://localhost:27017/test  # still fails - fix below
   kafka:
     bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
+    admin:
+      enabled: false
+    listener:
+      auto-startup: false
 
 # Disable mail health check
 management:

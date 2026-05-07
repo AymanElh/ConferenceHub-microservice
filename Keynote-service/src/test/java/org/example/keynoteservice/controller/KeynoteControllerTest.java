@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -35,6 +36,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 )
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "spring.autoconfigure.exclude=org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration",
+        "spring.cloud.discovery.enabled=false",
+        "spring.cloud.inetutils.use-only-site-local-interfaces=true",
+        "spring.cloud.inetutils.default-hostname=localhost",
+        "spring.cloud.inetutils.default-ip-address=127.0.0.1",
+        "spring.cloud.config.enabled=false",
+        "spring.config.import="
+})
 public class KeynoteControllerTest {
     @Autowired
     MockMvc mockMvc;

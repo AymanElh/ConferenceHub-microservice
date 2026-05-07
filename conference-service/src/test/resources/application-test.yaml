@@ -15,7 +15,9 @@ spring:
     hibernate:
       ddl-auto: create-drop
   kafka:
-    bootstrap-servers: localhost:9092   # Will be mocked
+    bootstrap-servers: localhost:9092
+    admin:
+      enabled: false
   security:
     oauth2:
       resourceserver:
