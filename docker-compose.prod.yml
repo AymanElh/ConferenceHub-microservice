@@ -1,41 +1,314 @@
+# ═══════════════════════════════════════════════════════════════
+# docker-compose.prod.yml  —  Production (pull images, no builds)
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Notes:
+#   - Application services use prebuilt images from Docker Hub.
+#   - Infra services use upstream images (Postgres/MariaDB/Kafka/etc).
+#   - Only gateway + keycloak are port-exposed by default.
+# ═══════════════════════════════════════════════════════════════
+
 services:
+  # ═══════════════════════════════════════════════════════════════
+  # KEYCLOAK
+  # ═══════════════════════════════════════════════════════════════
   keycloak-db:
+    image: postgres:16-alpine
+    container_name: conference-keycloak-db
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      POSTGRES_DB: keycloak
+    volumes:
+      - keycloak-pgdata:/var/lib/postgresql/data
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d keycloak" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: conference-keycloak
     command: start --import-realm
     restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - conference-network
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
     ports:
       - "8080:8080"
+    healthcheck:
+      # Keycloak image is minimal and does not include curl/wget; use bash TCP probe.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8080'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
 
+  # ═══════════════════════════════════════════════════════════════
+  # Keynote service db
+  # ═══════════════════════════════════════════════════════════════
   keynote_db:
+    image: mariadb:10.11
+    container_name: keynote_db
     restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keynote
+    volumes:
+      - keynote-mysqldata:/var/lib/mysql
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -proot || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
+  # ═══════════════════════════════════════════════════════════════
+  # KAFKA (KRaft mode — no Zookeeper needed)
+  # ═══════════════════════════════════════════════════════════════
   kafka:
+    image: apache/kafka:3.7.0
+    container_name: conference-kafka
     restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ═══════════════════════════════════════════════════════════════
+  # Conference service db
+  # ═══════════════════════════════════════════════════════════════
   conference-db:
+    image: postgres:16-alpine
+    container_name: conference-db
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CONFERENCE_DB_USER}
+      POSTGRES_PASSWORD: ${CONFERENCE_DB_PASSWORD}
+      POSTGRES_DB: conference-db
+    volumes:
+      - conference-pgdata:/var/lib/postgresql/data
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONFERENCE_DB_USER} -d conference-db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ═══════════════════════════════════════════════════════════════
+  # MongoDB
+  # ═══════════════════════════════════════════════════════════════
   mongodb:
+    image: mongo:latest
+    container_name: conference-mongodb
     restart: unless-stopped
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      conference-network:
+        aliases:
+          - mongo
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
-  config-service:
+  # ═══════════════════════════════════════════════════════════════
+  # Mailpit (SMTP trap — needed by notification-service in all envs)
+  # ═══════════════════════════════════════════════════════════════
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: conference-mailpit
     restart: unless-stopped
+    networks:
+      - conference-network
+
+  # ═══════════════════════════════════════════════════════════════
+  # APPLICATION SERVICES (pull from Docker Hub)
+  # ═══════════════════════════════════════════════════════════════
+  config-service:
+    image: aymanelh/conferencehub-config:latest
+    container_name: conference-config-service
+    restart: unless-stopped
+    environment:
+      - CONFIG_GIT_URI=${CONFIG_GIT_URI}
+      - CONFIG_GIT_USER=${CONFIG_GIT_USER}
+      - CONFIG_GIT_PASSWORD=${CONFIG_GIT_PASSWORD}
+      - MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - conference-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   discovery-service:
+    image: aymanelh/conferencehub-discovery:latest
+    container_name: conference-discovery-service
     restart: unless-stopped
+    environment:
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - conference-network
+    depends_on:
+      config-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   gateway-service:
+    image: aymanelh/conferencehub-gateway:latest
+    container_name: conference-gateway-service
     restart: unless-stopped
+    environment:
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
+      - MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
     ports:
-      - "80:8080"
+      - "8881:8881"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8881/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   keynote-service:
+    image: aymanelh/conferencehub-keynote:latest
+    container_name: conference-keynote-service
     restart: unless-stopped
+    environment:
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://keynote_db:3306/keynote
+      - SPRING_DATASOURCE_USERNAME=${KEYNOTE_DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${KEYNOTE_DB_PASSWORD}
+      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI}
+      - KEYCLOAK_JWK_URI=${KEYCLOAK_JWK_URI}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   conference-service:
+    image: aymanelh/conferencehub-conference:latest
+    container_name: conference-conference-service
     restart: unless-stopped
+    environment:
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
+      - CONFERENCE_DB_URL=jdbc:postgresql://conference-db:5432/conference-db
+      - CONFERENCE_DB_USER=${CONFERENCE_DB_USER}
+      - CONFERENCE_DB_PASSWORD=${CONFERENCE_DB_PASSWORD}
+      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI}
+      - KEYCLOAK_JWK_URI=${KEYCLOAK_JWK_URI}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   notification-service:
+    image: aymanelh/conferencehub-notification:latest
+    container_name: conference-notification-service
     restart: unless-stopped
+    environment:
+      - CONFIG_SERVER_URL=${CONFIG_SERVER_URL}
+      - EUREKA_SERVER_URL=${EUREKA_SERVER_URL}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - MONGO_HOST=mongodb
+      - SPRING_DATA_MONGODB_HOST=mongodb
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/notification
+      - MAIL_HOST=mailpit
+      - MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+    networks:
+      - conference-network
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  conference-network:
+    driver: bridge
+
+volumes:
+  keycloak-pgdata:
+  kafka-data:
+  conference-pgdata:
+  mongodb-data:
+  keynote-mysqldata:
