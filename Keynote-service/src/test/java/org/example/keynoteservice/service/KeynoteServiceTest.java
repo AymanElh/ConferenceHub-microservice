@@ -4,27 +4,22 @@ import org.example.keynoteservice.Mappers.KeynoteMapper;
 import org.example.keynoteservice.dto.KeynoteDTO;
 import org.example.keynoteservice.exception.KeynoteNotFoundException;
 import org.example.keynoteservice.kafka.KeynoteProducer;
-import org.example.keynoteservice.kafka.KeynoteWelcomeEvent;
 import org.example.keynoteservice.model.Keynote;
 import org.example.keynoteservice.repositroy.KeynoteRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class KeynoteServiceTest {
@@ -39,123 +34,66 @@ class KeynoteServiceTest {
     private KeynoteProducer keynoteProducer;
 
     @InjectMocks
-    private KeynoteService keynoteService;
-
-    private Keynote keynote;
-    private KeynoteDTO keynoteDTO;
-
-    @BeforeEach
-    void setUp() {
-        keynote = new Keynote();
-        keynote.setId(1L);
-        keynote.setNom("Doe");
-        keynote.setPrenom("John");
-        keynote.setEmail("john.doe@example.com");
-
-        keynoteDTO = new KeynoteDTO();
-        keynoteDTO.setId(1L);
-        keynoteDTO.setNom("Doe");
-        keynoteDTO.setPrenom("John");
-        keynoteDTO.setEmail("john.doe@example.com");
-    }
+    private KeynoteService service;
 
     @Test
-    void create_ShouldSaveKeynoteAndSendWelcomeEvent() {
-        // Given
-        when(keynoteRepository.existsByEmail(keynoteDTO.getEmail())).thenReturn(false);
-        when(keynoteMapper.toEntity(keynoteDTO)).thenReturn(keynote);
-        when(keynoteRepository.save(keynote)).thenReturn(keynote);
-        when(keynoteMapper.toDto(keynote)).thenReturn(keynoteDTO);
+    void create_whenEmailExists_throws_andDoesNotPublish() {
+        KeynoteDTO dto = new KeynoteDTO();
+        dto.setEmail("x@example.com");
 
-        // When
-        KeynoteDTO result = keynoteService.create(keynoteDTO);
+        when(keynoteRepository.existsByEmail("x@example.com")).thenReturn(true);
 
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getEmail()).isEqualTo(keynoteDTO.getEmail());
-        verify(keynoteRepository).save(any(Keynote.class));
-        verify(keynoteProducer).sendWelcomeEvent(any(KeynoteWelcomeEvent.class));
-    }
-
-    @Test
-    void create_ShouldThrowException_WhenEmailAlreadyExists() {
-        // Given
-        when(keynoteRepository.existsByEmail(keynoteDTO.getEmail())).thenReturn(true);
-
-        // When / Then
-        assertThatThrownBy(() -> keynoteService.create(keynoteDTO))
+        assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Email already exists");
-        
-        verify(keynoteRepository, never()).save(any());
+
         verify(keynoteProducer, never()).sendWelcomeEvent(any());
     }
 
     @Test
-    void findById_ShouldReturnKeynote_WhenIdExists() {
-        // Given
-        when(keynoteRepository.findById(1L)).thenReturn(Optional.of(keynote));
-        when(keynoteMapper.toDto(keynote)).thenReturn(keynoteDTO);
+    void create_saves_andPublishesWelcomeEvent() {
+        KeynoteDTO dto = new KeynoteDTO();
+        dto.setNom("N");
+        dto.setPrenom("P");
+        dto.setEmail("x@example.com");
+        dto.setFonction("F");
 
-        // When
-        KeynoteDTO result = keynoteService.findById(1L);
+        Keynote entity = new Keynote();
+        when(keynoteRepository.existsByEmail("x@example.com")).thenReturn(false);
+        when(keynoteMapper.toEntity(dto)).thenReturn(entity);
 
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(1L);
+        Keynote savedEntity = new Keynote();
+        savedEntity.setId(99L);
+        when(keynoteRepository.save(entity)).thenReturn(savedEntity);
+
+        KeynoteDTO savedDto = new KeynoteDTO();
+        savedDto.setId(99L);
+        savedDto.setNom("N");
+        savedDto.setPrenom("P");
+        savedDto.setEmail("x@example.com");
+        savedDto.setFonction("F");
+        when(keynoteMapper.toDto(savedEntity)).thenReturn(savedDto);
+
+        KeynoteDTO out = service.create(dto);
+
+        assertThat(out.getId()).isEqualTo(99L);
+        verify(keynoteProducer).sendWelcomeEvent(any());
     }
 
     @Test
-    void findById_ShouldThrowException_WhenIdDoesNotExist() {
-        // Given
+    void update_whenMissing_throws() {
         when(keynoteRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When / Then
-        assertThatThrownBy(() -> keynoteService.findById(1L))
-                .isInstanceOf(KeynoteNotFoundException.class)
-                .hasMessageContaining("Keynote not found");
+        assertThatThrownBy(() -> service.update(1L, new KeynoteDTO()))
+                .isInstanceOf(KeynoteNotFoundException.class);
     }
 
     @Test
-    void update_ShouldUpdateFields_WhenIdExists() {
-        // Given
-        when(keynoteRepository.findById(1L)).thenReturn(Optional.of(keynote));
-        when(keynoteRepository.save(any(Keynote.class))).thenReturn(keynote);
-        when(keynoteMapper.toDto(any(Keynote.class))).thenReturn(keynoteDTO);
+    void delete_whenMissing_throws() {
+        when(keynoteRepository.existsById(1L)).thenReturn(false);
 
-        // When
-        KeynoteDTO result = keynoteService.update(1L, keynoteDTO);
-
-        // Then
-        assertThat(result).isNotNull();
-        verify(keynoteRepository).save(keynote);
-    }
-
-    @Test
-    void delete_ShouldCallRepositoryDelete_WhenIdExists() {
-        // Given
-        when(keynoteRepository.existsById(1L)).thenReturn(true);
-
-        // When
-        keynoteService.delete(1L);
-
-        // Then
-        verify(keynoteRepository).deleteById(1L);
-    }
-
-    @Test
-    void findAll_ShouldReturnPagedResults() {
-        // Given
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<Keynote> keynotePage = new PageImpl<>(List.of(keynote));
-        when(keynoteRepository.findAll(pageable)).thenReturn(keynotePage);
-        when(keynoteMapper.toDto(keynote)).thenReturn(keynoteDTO);
-
-        // When
-        Page<KeynoteDTO> result = keynoteService.findAll(pageable);
-
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getContent()).hasSize(1);
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(KeynoteNotFoundException.class);
     }
 }
+

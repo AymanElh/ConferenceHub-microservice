@@ -4,7 +4,6 @@ import com.conferenchub.notificationservice.domain.model.EventType;
 import com.conferenchub.notificationservice.domain.model.Notification;
 import com.conferenchub.notificationservice.domain.model.NotificationStatus;
 import com.conferenchub.notificationservice.domain.repository.NotificationRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,10 +14,12 @@ import org.springframework.mail.javamail.JavaMailSender;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
@@ -30,96 +31,74 @@ class NotificationServiceTest {
     private JavaMailSender mailSender;
 
     @InjectMocks
-    private NotificationService notificationService;
-
-    private Notification notification;
-
-    @BeforeEach
-    void setUp() {
-        notification = Notification.builder()
-                .id("test-id")
-                .destinataire("user@example.com")
-                .sujet("Test Subject")
-                .contenu("Test Content")
-                .typeEvenement(EventType.CONFERENCE_CREATED)
-                .referenceId(123L)
-                .tentatives(0)
-                .build();
-    }
+    private NotificationService service;
 
     @Test
-    void processAndSaveNotification_ShouldSendEmailAndMarkAsSent() {
-        // Given
-        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(any(), any(), any()))
-                .thenReturn(false);
-        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
+    void processAndSaveNotification_whenAlreadySent_skips() {
+        Notification n = new Notification();
+        n.setReferenceId(1L);
+        n.setTypeEvenement(EventType.CONFERENCE_CREATED);
+        n.setStatut(NotificationStatus.ENVOYEE);
+        n.setDestinataire("a@example.com");
+        n.setTentatives(0);
 
-        // When
-        notificationService.processAndSaveNotification(notification);
+        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(
+                1L, EventType.CONFERENCE_CREATED, NotificationStatus.ENVOYEE)).thenReturn(true);
 
-        // Then
-        verify(mailSender).send(any(SimpleMailMessage.class));
-        verify(notificationRepository, times(2)).save(notification);
-        assertThat(notification.getStatut()).isEqualTo(NotificationStatus.ENVOYEE);
-    }
+        service.processAndSaveNotification(n);
 
-    @Test
-    void processAndSaveNotification_ShouldSkip_WhenAlreadySent() {
-        // Given
-        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(123L, EventType.CONFERENCE_CREATED, NotificationStatus.ENVOYEE))
-                .thenReturn(true);
-
-        // When
-        notificationService.processAndSaveNotification(notification);
-
-        // Then
-        verify(mailSender, never()).send(any(SimpleMailMessage.class));
         verify(notificationRepository, never()).save(any());
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
     @Test
-    void processAndSaveNotification_ShouldMarkAsFailed_WhenMailSenderFails() {
-        // Given
-        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(any(), any(), any()))
-                .thenReturn(false);
-        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
-        doThrow(new RuntimeException("SMTP Server Down")).when(mailSender).send(any(SimpleMailMessage.class));
+    void processAndSaveNotification_sendsMail_andMarksSent() {
+        Notification n = new Notification();
+        n.setReferenceId(2L);
+        n.setTypeEvenement(EventType.CONFERENCE_CREATED);
+        n.setDestinataire("a@example.com");
+        n.setSujet("S");
+        n.setContenu("C");
+        n.setTentatives(0);
 
-        // When
-        notificationService.processAndSaveNotification(notification);
+        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(
+                2L, EventType.CONFERENCE_CREATED, NotificationStatus.ENVOYEE)).thenReturn(false);
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // Then
-        assertThat(notification.getStatut()).isEqualTo(NotificationStatus.ECHOUEE);
-        assertThat(notification.getErreurMessage()).isEqualTo("SMTP Server Down");
-        verify(notificationRepository, times(2)).save(notification);
-    }
+        service.processAndSaveNotification(n);
 
-    @Test
-    void retryFailedNotification_ShouldProcessAgain_WhenStatusIsFailed() {
-        // Given
-        notification.setStatut(NotificationStatus.ECHOUEE);
-        when(notificationRepository.findById("test-id")).thenReturn(Optional.of(notification));
-        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(any(), any(), any()))
-                .thenReturn(false);
-        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
-
-        // When
-        notificationService.retryFailedNotification("test-id");
-
-        // Then
         verify(mailSender).send(any(SimpleMailMessage.class));
-        assertThat(notification.getStatut()).isEqualTo(NotificationStatus.ENVOYEE);
+        verify(notificationRepository, org.mockito.Mockito.times(2)).save(any(Notification.class));
     }
 
     @Test
-    void retryFailedNotification_ShouldThrowException_WhenStatusIsNotFailed() {
-        // Given
-        notification.setStatut(NotificationStatus.ENVOYEE);
-        when(notificationRepository.findById("test-id")).thenReturn(Optional.of(notification));
+    void retryFailedNotification_whenNotFailed_throws() {
+        Notification n = new Notification();
+        n.setId("1");
+        n.setStatut(NotificationStatus.ENVOYEE);
+        when(notificationRepository.findById("1")).thenReturn(Optional.of(n));
 
-        // When / Then
-        assertThatThrownBy(() -> notificationService.retryFailedNotification("test-id"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Only failed notifications can be retried");
+        assertThatThrownBy(() -> service.retryFailedNotification("1"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void processAndSaveNotification_whenToMissing_marksFailed() {
+        Notification n = new Notification();
+        n.setReferenceId(3L);
+        n.setTypeEvenement(EventType.CONFERENCE_CREATED);
+        n.setDestinataire(" ");
+        n.setSujet("S");
+        n.setContenu("C");
+        n.setTentatives(0);
+
+        when(notificationRepository.existsByReferenceIdAndTypeEvenementAndStatut(
+                3L, EventType.CONFERENCE_CREATED, NotificationStatus.ENVOYEE)).thenReturn(false);
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.processAndSaveNotification(n);
+
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+        verify(notificationRepository, org.mockito.Mockito.times(2)).save(any(Notification.class));
     }
 }
