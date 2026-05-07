@@ -159,7 +159,7 @@ class ConferenceServiceImplTest {
 
         assertThat(out.getKeynotes()).hasSize(2);
         assertThat(out.getKeynotes().stream().map(KeynoteResponse::getId)).containsExactlyInAnyOrder(10L, 20L);
-        assertThat(out.getKeynotes().getFirst().getNom()).isEqualTo("Service Unavailable");
+        assertThat(out.getKeynotes().get(0).getNom()).isEqualTo("Service Unavailable");
     }
 
     @Test
