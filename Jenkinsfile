@@ -94,7 +94,10 @@ pipeline {
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS'
                     )]) {
-                        sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                        sh '''
+                            set +x
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        '''
 
                         services.each { svc ->
                             def imageName = "${DOCKER_REGISTRY}/conferencehub-${svc.name}"
@@ -115,11 +118,26 @@ pipeline {
                             sh "docker build ${buildArgs.join(' ')} ."
 
                             // Push all tags
-                            sh "docker push ${imageName}:${imageVersion}"
-                            sh "docker push ${imageName}:${env.BRANCH_NAME}-latest"
+                            sh """
+                                docker push ${imageName}:${imageVersion} || {
+                                    echo 'Docker push failed. Check Jenkins credential docker-hub-credentials: the Docker Hub access token must have Read/Write permissions for ${DOCKER_REGISTRY}/conferencehub-${svc.name}.'
+                                    exit 1
+                                }
+                            """
+                            sh """
+                                docker push ${imageName}:${env.BRANCH_NAME}-latest || {
+                                    echo 'Docker push failed. Check Jenkins credential docker-hub-credentials: the Docker Hub access token must have Read/Write permissions for ${DOCKER_REGISTRY}/conferencehub-${svc.name}.'
+                                    exit 1
+                                }
+                            """
 
                             if (env.BRANCH_NAME == 'main') {
-                                sh "docker push ${imageName}:latest"
+                                sh """
+                                    docker push ${imageName}:latest || {
+                                        echo 'Docker push failed. Check Jenkins credential docker-hub-credentials: the Docker Hub access token must have Read/Write permissions for ${DOCKER_REGISTRY}/conferencehub-${svc.name}.'
+                                        exit 1
+                                    }
+                                """
                             }
                         }
                     }
