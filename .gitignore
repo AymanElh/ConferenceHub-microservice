@@ -65,11 +65,6 @@ application-secret.yml
 **/src/main/resources/application-local*.properties
 
 # ===========================
-# Docker
-# ===========================
-.dockerignore
-
-# ===========================
 # Node / Frontend (if any)
 # ===========================
 node_modules/
@@ -95,4 +90,3 @@ yarn-error.log*
 rebel.xml
 rebel-remote.xml
 .rebel/
-

@@ -1,31 +1,39 @@
-# Stage 1: Build
 FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
-WORKDIR /build
+WORKDIR /workspace
 
-# Copy root pom (dependency management)
-COPY pom.xml ./pom.xml
+COPY pom.xml .
+COPY config-service/pom.xml config-service/pom.xml
+COPY discovery-service/pom.xml discovery-service/pom.xml
+COPY gateway-service/pom.xml gateway-service/pom.xml
+COPY Keynote-service/pom.xml Keynote-service/pom.xml
+COPY conference-service/pom.xml conference-service/pom.xml
+COPY notification-service/pom.xml notification-service/pom.xml
 
-# Copy only this service's pom for layer caching
-COPY notification-service/pom.xml ./notification-service/pom.xml
+RUN mvn -pl notification-service -am dependency:go-offline --batch-mode
 
-# Download deps only (cached if pom unchanged)
-RUN mvn dependency:go-offline -pl notification-service -am --batch-mode
+COPY . .
 
-# Copy source
-COPY notification-service/src ./notification-service/src
+RUN mvn -pl notification-service -am clean package -DskipTests --batch-mode
 
-# Build only this module
-RUN mvn clean package -pl notification-service -DskipTests --batch-mode
-
-# Stage 2: Run
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-RUN addgroup -S spring && adduser -S spring -G spring
+ARG BUILD_VERSION=unknown
+LABEL org.opencontainers.image.title="conferencehub-notification" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.source="https://github.com/aymanelh/ConferenceHub-microservices"
+
+RUN apk add --no-cache wget \
+    && addgroup -S spring \
+    && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=builder /build/notification-service/target/*.jar app.jar
+COPY --from=builder --chown=spring:spring /workspace/notification-service/target/*.jar app.jar
 
 EXPOSE 8083
 
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8083/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
