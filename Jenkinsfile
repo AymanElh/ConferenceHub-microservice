@@ -100,18 +100,19 @@ pipeline {
                             def imageName = "${DOCKER_REGISTRY}/conferencehub-${svc.name}"
 
                             // Always build with build number + branch-latest
-                            def buildArgs = """
-                                -f ${svc.file} \
-                                -t ${imageName}:${imageVersion} \
-                                -t ${imageName}:${env.BRANCH_NAME}-latest \
-                            """.stripIndent()
+                            def buildArgs = [
+                                "-f ${svc.file}",
+                                "--build-arg BUILD_VERSION=${imageVersion}",
+                                "-t ${imageName}:${imageVersion}",
+                                "-t ${imageName}:${env.BRANCH_NAME}-latest"
+                            ]
 
                             // main branch also gets :latest tag
                             if (env.BRANCH_NAME == 'main') {
-                                buildArgs += "-t ${imageName}:latest"
+                                buildArgs << "-t ${imageName}:latest"
                             }
 
-                            sh "docker build ${buildArgs} ."
+                            sh "docker build ${buildArgs.join(' ')} ."
 
                             // Push all tags
                             sh "docker push ${imageName}:${imageVersion}"
