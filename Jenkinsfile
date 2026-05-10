@@ -46,6 +46,9 @@ pipeline {
                             -Dsonar.projectName="ConferenceHub" \
                             -Dsonar.host.url="${SONAR_HOST_URL:-http://localhost:9000}" \
                             -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml \
+                            -Dsonar.exclusions='**/target/**,**/.github/**,docs/**,monitoring/**,keycloak/**,**/Dockerfile,**/*.png,**/mvnw,**/mvnw.cmd' \
+                            -Dsonar.cpd.exclusions='**/Dockerfile,**/.github/**,docs/**,monitoring/**,keycloak/**' \
+                            -Dsonar.coverage.exclusions='**/*Application.java,**/config/**,**/dto/**,**/entity/**,**/model/**,**/mapper/**,**/mappers/**,**/*MapperImpl.java,**/exception/**,**/kafka/event/**,**/*Event.java' \
                             -Dsonar.maven.scanAll=true \
                             -Dspring.cloud.config.enabled=false
                     '''

@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl gateway-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY gateway-service/src gateway-service/src
 
 RUN mvn -pl gateway-service -am clean package -DskipTests --batch-mode
 
@@ -28,7 +28,7 @@ RUN apk add --no-cache wget \
     && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=builder --chown=spring:spring /workspace/gateway-service/target/*.jar app.jar
+COPY --from=builder --chown=spring:spring --chmod=0444 /workspace/gateway-service/target/*.jar app.jar
 
 EXPOSE 8881
 

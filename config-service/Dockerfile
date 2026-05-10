@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl config-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY config-service/src config-service/src
 
 RUN mvn -pl config-service -am clean package -DskipTests --batch-mode
 
@@ -28,7 +28,7 @@ RUN apk add --no-cache wget \
     && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=builder --chown=spring:spring /workspace/config-service/target/*.jar app.jar
+COPY --from=builder --chown=spring:spring --chmod=0444 /workspace/config-service/target/*.jar app.jar
 
 EXPOSE 8888
 

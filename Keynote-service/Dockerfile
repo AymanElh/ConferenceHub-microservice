@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl Keynote-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY Keynote-service/src Keynote-service/src
 
 RUN mvn -pl Keynote-service -am clean package -DskipTests --batch-mode
 
@@ -28,7 +28,7 @@ RUN apk add --no-cache wget \
     && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=builder --chown=spring:spring /workspace/Keynote-service/target/*.jar app.jar
+COPY --from=builder --chown=spring:spring --chmod=0444 /workspace/Keynote-service/target/*.jar app.jar
 
 EXPOSE 8081
 
