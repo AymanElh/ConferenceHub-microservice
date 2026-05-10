@@ -21,7 +21,7 @@ public class KeynoteClientFallback implements FallbackFactory<KeynoteClient> {
             public KeynoteResponse getKeynoteById(Long id) {
                 Throwable rootCause = unwrap(cause);
 
-                if (rootCause instanceof KeynoteNotFoundException || rootCause instanceof FeignException.NotFound || (rootCause instanceof FeignException && ((FeignException) rootCause).status() == 404)) {
+                if (isNotFound(rootCause)) {
                     log.debug("Keynote id={} not found. Propagating 404.", id);
                     throw (RuntimeException) rootCause;
                 }
@@ -34,7 +34,7 @@ public class KeynoteClientFallback implements FallbackFactory<KeynoteClient> {
             @Override
             public List<KeynoteResponse> getKeynotesByIds(List<Long> ids) {
                 Throwable rootCause = unwrap(cause);
-                if (rootCause instanceof KeynoteNotFoundException || rootCause instanceof FeignException.NotFound || (rootCause instanceof FeignException && ((FeignException) rootCause).status() == 404)) {
+                if (isNotFound(rootCause)) {
                     throw (RuntimeException) rootCause;
                 }
 
@@ -48,11 +48,18 @@ public class KeynoteClientFallback implements FallbackFactory<KeynoteClient> {
     private Throwable unwrap(Throwable e) {
         Throwable cause = e;
         while (cause.getCause() != null && cause != cause.getCause()) {
-            if (cause instanceof FeignException) break;
+            if (cause instanceof FeignException) {
+                break;
+            }
             cause = cause.getCause();
         }
         return cause;
     }
-}
 
+    private boolean isNotFound(Throwable rootCause) {
+        return rootCause instanceof KeynoteNotFoundException
+                || rootCause instanceof FeignException.NotFound
+                || rootCause instanceof FeignException feignException && feignException.status() == 404;
+    }
+}
 

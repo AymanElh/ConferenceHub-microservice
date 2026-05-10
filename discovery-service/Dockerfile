@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl discovery-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY discovery-service/src discovery-service/src
 
 RUN mvn -pl discovery-service -am clean package -DskipTests --batch-mode
 

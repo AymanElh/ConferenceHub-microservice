@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl gateway-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY gateway-service/src gateway-service/src
 
 RUN mvn -pl gateway-service -am clean package -DskipTests --batch-mode
 

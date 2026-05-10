@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.test.context.ActiveProfiles;
@@ -18,7 +19,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
-public class KeynoteProducerTest {
+class KeynoteProducerTest {
 
     @Mock
     KafkaTemplate<String, Object> kafkaTemplate;
@@ -47,11 +48,14 @@ public class KeynoteProducerTest {
     @Test
     void sendWelcomeEvent_ShouldLog_WhenKafkaFails() {
         when(kafkaTemplate.send(any(Message.class)))
-                .thenThrow(new RuntimeException("Kafka down"));
+                .thenThrow(new KafkaException("Kafka down"));
 
-        assertThatThrownBy(() -> keynoteProducer.sendWelcomeEvent(
-                KeynoteWelcomeEvent.builder().keynoteId(1L)
-                        .email("x@x.com").build()))
-                .isInstanceOf(RuntimeException.class);
+        KeynoteWelcomeEvent event = KeynoteWelcomeEvent.builder()
+                .keynoteId(1L)
+                .email("x@x.com")
+                .build();
+
+        assertThatThrownBy(() -> keynoteProducer.sendWelcomeEvent(event))
+                .isInstanceOf(KafkaException.class);
     }
 }

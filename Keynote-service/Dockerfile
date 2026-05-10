@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl Keynote-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY Keynote-service/src Keynote-service/src
 
 RUN mvn -pl Keynote-service -am clean package -DskipTests --batch-mode
 

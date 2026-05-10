@@ -15,7 +15,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +36,7 @@ public class NotificationEventHandler {
         Notification notification = Notification.builder()
                 .destinataire(event.email())
                 .sujet("Bienvenue en tant que Keynote")
-                .contenu(String.format("Bonjour %s %s, \nBienvenue sur ConferenceHub !", event.prenom(), event.nom()))
+                .contenu(String.format("Bonjour %s %s,%nBienvenue sur ConferenceHub !", event.prenom(), event.nom()))
                 .typeEvenement(EventType.KEYNOTE_CREATED)
                 .referenceId(event.keynoteId())
                 .build();
@@ -47,8 +46,8 @@ public class NotificationEventHandler {
     }
 
     @KafkaListener(topics = "${application.kafka.topic.conference:conference-events}", groupId = "notification-group")
-    public void handleConferenceEvents(ConsumerRecord<String, String> record) {
-        String messageJson = record.value();
+    public void handleConferenceEvents(ConsumerRecord<String, String> consumerRecord) {
+        String messageJson = consumerRecord.value();
         try {
             // First, peek at the eventType
             var node = objectMapper.readTree(messageJson);
@@ -149,7 +148,7 @@ public class NotificationEventHandler {
         return Arrays.stream(managerEmailsCsv.split(","))
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @KafkaListener(topics = "review-events", groupId = "notification-group")
@@ -181,7 +180,7 @@ public class NotificationEventHandler {
         Notification notification = Notification.builder()
                 .destinataire(event.participantEmail())
                 .sujet("Confirmation d'inscription")
-                .contenu(String.format("Bonjour %s,\nVotre inscription à la conférence %d est confirmée.", event.participantNom(), event.conferenceId()))
+                .contenu(String.format("Bonjour %s,%nVotre inscription à la conférence %d est confirmée.", event.participantNom(), event.conferenceId()))
                 .typeEvenement(EventType.PARTICIPANT_REGISTERED)
                 .referenceId(event.inscriptionId())
                 .build();

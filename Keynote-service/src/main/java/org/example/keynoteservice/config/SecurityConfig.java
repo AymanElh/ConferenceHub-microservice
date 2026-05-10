@@ -17,11 +17,15 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String PARTICIPANT_ROLE = "PARTICIPANT";
+    private static final String KEYNOTES_API = "/api/keynotes/**";
+
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -37,10 +41,10 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/actuator/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/keynotes/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/keynotes/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/keynotes/**").hasRole("ADMIN")
-                        .requestMatchers("/api/keynotes/**").hasAnyRole("PARTICIPANT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, KEYNOTES_API).hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.PUT, KEYNOTES_API).hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.DELETE, KEYNOTES_API).hasRole(ADMIN_ROLE)
+                        .requestMatchers(KEYNOTES_API).hasAnyRole(PARTICIPANT_ROLE, ADMIN_ROLE)
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

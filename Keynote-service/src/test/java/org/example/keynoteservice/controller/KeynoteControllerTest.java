@@ -1,6 +1,5 @@
 package org.example.keynoteservice.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.keynoteservice.dto.KeynoteDTO;
 import org.example.keynoteservice.exception.KeynoteNotFoundException;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -45,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.cloud.config.enabled=false",
         "spring.config.import="
 })
-public class KeynoteControllerTest {
+class KeynoteControllerTest {
     @Autowired
     MockMvc mockMvc;
 

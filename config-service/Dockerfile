@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl config-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY config-service/src config-service/src
 
 RUN mvn -pl config-service -am clean package -DskipTests --batch-mode
 

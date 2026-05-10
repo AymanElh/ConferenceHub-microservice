@@ -32,6 +32,11 @@
 
         <micrometer-tracing.version>1.4.4</micrometer-tracing.version>
         <zipkin-reporter.version>3.4.2</zipkin-reporter.version>
+
+        <sonar.cpd.exclusions>
+            **/config/SecurityConfig.java,
+            **/config/KeycloakRealmRoleConverter.java
+        </sonar.cpd.exclusions>
     </properties>
 
     <modules>

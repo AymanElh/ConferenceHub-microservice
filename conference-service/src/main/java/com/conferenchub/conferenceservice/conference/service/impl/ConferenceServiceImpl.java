@@ -31,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -90,7 +89,7 @@ public class ConferenceServiceImpl implements ConferenceService {
     @Override
     public ConferenceResponse getConferenceById(Long id) {
         Conference conference = conferenceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Conference not found with id: " + id));
+                .orElseThrow(() -> new ConferenceNotFoundException("Conference not found with id: " + id));
 
         ConferenceResponse response = mapper.toResponse(conference);
 
@@ -111,7 +110,7 @@ public class ConferenceServiceImpl implements ConferenceService {
                         }
                     })
                     .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .toList();
 
             response.setKeynotes(keynotes);
 
@@ -124,7 +123,7 @@ public class ConferenceServiceImpl implements ConferenceService {
                         p.setNom("Service Unavailable");
                         p.setPrenom("(Resilience)");
                         return p;
-                    }).collect(Collectors.toList());
+                    }).toList();
             response.setKeynotes(placeholders);
         } catch (Exception e) {
             log.error("Unexpected error while fetching keynotes: {}", e.getMessage());
@@ -182,13 +181,13 @@ public class ConferenceServiceImpl implements ConferenceService {
                                     }
                                 })
                                 .filter(java.util.Objects::nonNull)
-                                .collect(Collectors.toList());
+                                .toList();
                         response.setKeynotes(keynotes);
                     }
 
                     return response;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -202,7 +201,7 @@ public class ConferenceServiceImpl implements ConferenceService {
         if (status == ConferenceStatus.IN_PROGRESS || status == ConferenceStatus.CANCELLED || status == ConferenceStatus.COMPLETED) {
             List<String> emails = saved.getInscriptions().stream()
                     .map(Inscription::getParticipantEmail)
-                    .collect(Collectors.toList());
+                    .toList();
 
             String statusLabel = switch (status) {
                 case IN_PROGRESS -> "EN_COURS";

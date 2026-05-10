@@ -11,7 +11,7 @@ COPY notification-service/pom.xml notification-service/pom.xml
 
 RUN mvn -pl conference-service -am dependency:go-offline --batch-mode
 
-COPY . .
+COPY conference-service/src conference-service/src
 
 RUN mvn -pl conference-service -am clean package -DskipTests --batch-mode
 
