@@ -30,7 +30,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -96,7 +95,7 @@ class ConferenceServiceImplTest {
         verify(conferenceRepository).save(captor.capture());
         Conference toSave = captor.getValue();
         assertThat(toSave.getStatus()).isEqualTo(ConferenceStatus.PLANNED);
-        assertThat(toSave.getRegisteredNumber()).isEqualTo(0);
+        assertThat(toSave.getRegisteredNumber()).isZero();
         assertThat(toSave.getScore()).isEqualTo(0.0);
 
         verify(keynoteClient).getKeynoteById(10L);
@@ -165,7 +164,7 @@ class ConferenceServiceImplTest {
     @Test
     void searchConferences_whenTitleProvided_usesTitleQuery() {
         PageRequest pageable = PageRequest.of(0, 10);
-        when(conferenceRepository.findByTitleContainingIgnoreCase(eq("java"), eq(pageable)))
+        when(conferenceRepository.findByTitleContainingIgnoreCase("java", pageable))
                 .thenReturn(new PageImpl<>(List.of()));
 
         Page<ConferenceResponse> out = service.searchConferences("java", null, pageable);

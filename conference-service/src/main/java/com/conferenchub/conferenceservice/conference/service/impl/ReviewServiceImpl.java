@@ -5,6 +5,7 @@ import com.conferenchub.conferenceservice.conference.dto.request.CreateReviewDto
 import com.conferenchub.conferenceservice.conference.dto.response.KeynoteResponse;
 import com.conferenchub.conferenceservice.conference.entity.Conference;
 import com.conferenchub.conferenceservice.conference.entity.Review;
+import com.conferenchub.conferenceservice.conference.exception.ConferenceNotFoundException;
 import com.conferenchub.conferenceservice.conference.kafka.event.NewReviewEvent;
 import com.conferenchub.conferenceservice.conference.kafka.producer.ReviewEventProducer;
 import com.conferenchub.conferenceservice.conference.mapper.ReviewMapper;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,14 +34,14 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public void addReview(Long conferenceId, CreateReviewDto reviewDto){
         Conference conference = conferenceRepository.findById(conferenceId)
-                .orElseThrow(() -> new RuntimeException("Conference not found"));
+                .orElseThrow(() -> new ConferenceNotFoundException("Conference not found with id: " + conferenceId));
 
         List<String> keynoteEmails = Collections.emptyList();
         
         if (conference.getKeynoteIds() != null && !conference.getKeynoteIds().isEmpty()) {
             keynoteEmails = keynoteClient.getKeynotesByIds(conference.getKeynoteIds()).stream()
                     .map(KeynoteResponse::getEmail)
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         Review review = reviewMapper.toEntity(reviewDto);

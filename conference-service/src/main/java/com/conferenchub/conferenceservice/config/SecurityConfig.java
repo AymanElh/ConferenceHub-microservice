@@ -17,11 +17,14 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String PARTICIPANT_ROLE = "PARTICIPANT";
+
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
@@ -38,10 +41,10 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/actuator/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/conferences/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/conferences/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/inscriptions/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/**").hasAnyRole("PARTICIPANT", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/conferences/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/conferences/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inscriptions/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers("/api/v1/**").hasAnyRole(PARTICIPANT_ROLE, ADMIN_ROLE)
                         .requestMatchers("/api/profile/**").authenticated()
                         .anyRequest().authenticated()
                 )
