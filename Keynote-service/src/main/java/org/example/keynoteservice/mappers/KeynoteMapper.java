@@ -1,4 +1,4 @@
-package org.example.keynoteservice.Mappers;
+package org.example.keynoteservice.mappers;
 
 import org.example.keynoteservice.dto.KeynoteDTO;
 import org.example.keynoteservice.model.Keynote;

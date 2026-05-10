@@ -1,7 +1,7 @@
 package org.example.keynoteservice.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.keynoteservice.Mappers.KeynoteMapper;
+import org.example.keynoteservice.mappers.KeynoteMapper;
 import org.example.keynoteservice.dto.KeynoteDTO;
 import org.example.keynoteservice.kafka.KeynoteProducer;
 import org.example.keynoteservice.kafka.KeynoteWelcomeEvent;
@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -97,6 +96,6 @@ public class KeynoteService implements IKeynoteService {
     public List<KeynoteDTO> findByIds(List<Long> ids) {
         return keynoteRepository.findAllById(ids).stream()
                 .map(keynoteMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
